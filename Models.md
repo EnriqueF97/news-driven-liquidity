@@ -1,6 +1,6 @@
 # HuggingFace Models
 
-## Featured Models
+## Sentiment analysis models (NLP)
 
 - **[ProsusAI/finBERT](https://huggingface.co/ProsusAI/finbert)**
     - Input: Text like news
@@ -15,20 +15,12 @@
     - Output: Percenetages on bearish, bullish or neutral score.
     - Description: 
 
-- **[Model Name](https://huggingface.co/model-id)**
-    - Input: 
-    - Output: Transformer, CNN, etc.
-
-- **[Model Name](https://huggingface.co/model-id)**
-    - Input: 
-    - Output: Transformer, CNN, etc.
-
 
 ## Prompt to analyze financial text and produce new scores
 
 The experiment gets the text and scores output from finBERT and using also current news and hidden relationships that finBERT its ignoring therefore its scores could not represent accurately what the news impact could be.
 
-```python
+```console
 I am conducting an experiment to study financial impacts on commodities. The goal is to predict how a given news item affects the liquidity of a commodity. The commodity is not restricted and may vary per news item.
 
 I use a financial sentiment model that scores news paragraphs as negative, neutral, or positive. This model is trained on financial language and terminology.
