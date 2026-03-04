@@ -1,0 +1,44 @@
+# config_hourly.yaml
+# Primary configuration for hourly data pipeline
+
+project:
+  name: "WTI Liquidity Dynamics"
+  commodity: "WTI_USD"
+  ticker: "CL=F"
+
+data:
+  interval: "1h"
+  period: "2y"
+  timezone: "US/Eastern"
+
+eia:
+  series: "WCRSTUS1"
+  publication_time: "10:30"
+  publication_day: "Wednesday"
+
+event_windows:
+  hours_before: 4
+  hours_after: 8
+  min_events_per_hour: 20
+  reaction_window: [0, 2]
+
+liquidity:
+  primary_variable: "log_volume"
+  secondary_variables:
+    - "price_range"
+    - "amihud"
+
+nlp:
+  model: "ProsusAI/finbert"
+  max_length: 512
+  batch_size: 16
+  sentiment_labels:
+    - "positive"
+    - "neutral"
+    - "negative"
+
+modeling:
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  random_seed: 42
