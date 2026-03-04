@@ -1,5 +1,7 @@
 # Progress Report — Month 1
+
 ## Project: Modeling News-Driven Liquidity Dynamics and Information Propagation in Commodities Markets
+
 **Author:** Enrique Favila Martínez  
 **Institution:** Radboud University — Master's in Artificial Intelligence  
 **Host company:** Hammer Market Intelligence  
@@ -111,7 +113,7 @@ Visual analysis of the event windows reveals two notable patterns:
 Three linear regression models were estimated with log-volume as the dependent variable and inventory shock direction, shock magnitude, and their interaction as predictors:
 
 | Model | Variable | Coefficient | p-value |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | M1 — Direction only | is_bearish | 0.210 | 0.030 |
 | M2 — Direction + Magnitude | is_bearish | 0.217 | 0.030 |
 | M2 — Direction + Magnitude | shock_size | −0.014 | 0.782 |
