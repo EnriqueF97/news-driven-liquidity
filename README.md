@@ -13,38 +13,38 @@ This thesis investigates how news-driven information affects liquidity dynamics 
 
 - **RQ1** — Do negative (bearish) news events have a significantly larger and more persistent impact on WTI liquidity than positive (bullish) events?
 - **RQ2** — What is the lag structure of news impact on liquidity? (effect at +1h, +2h, +5h? Is there reversal?)
-- **RQ3** *(optional)* — How do liquidity shocks propagate across related commodities (WTI, Brent, Natural Gas)?
+- **RQ3** — How do liquidity shocks propagate across related commodities (WTI, Brent, Natural Gas)?
 
 ---
 
 ## Repository Structure
 
-```
-proyecto_wti/
-├── 01_data/
+```text
+project_wti/
+├── 01_data/                    # Data directory
 │   ├── raw/
-│   │   ├── price/        # Raw OHLCV data from yfinance (CL=F)
-│   │   ├── news/         # Raw news text (GDELT, EIA reports)
-│   │   └── macro/        # EIA inventories, FRED exchange rates
-│   ├── processed/        # Cleaned and aligned data
-│   └── features/         # Model-ready feature datasets
+│   │   ├── price/              # Raw OHLCV data from yfinance (CL=F)
+│   │   ├── news/               # Raw news text (GDELT, EIA reports)
+│   │   └── macro/              # EIA inventories, FRED exchange rates
+│   ├── processed/              # Cleaned and aligned data
+│   └── features/               # Model-ready feature datasets
 │
-├── 02_notebooks/         # Exploration and prototyping notebooks
+├── 02_notebooks/               # Exploration and prototyping notebooks
 │
 ├── 03_src/
-│   ├── adquisicion/      # Data acquisition scripts
-│   ├── features/         # Feature engineering
-│   ├── modelos/          # Model implementations (baseline, RQ1, RQ2)
-│   ├── nlp/              # NLP pipeline (FinBERT, preprocessing)
-│   └── config/           # Experiment configuration files
+│   ├── acquisition/            # Data acquisition scripts
+│   ├── features/               # Feature engineering
+│   ├── models/                 # Model implementations (baseline, RQ1, RQ2)
+│   ├── nlp/                    # NLP pipeline (FinBERT, preprocessing)
+│   └── config/                 # Experiment configuration files
 │
 ├── 04_outputs/
-│   ├── figures/          # Generated plots
-│   ├── tables/           # Result tables
-│   ├── models/           # Saved trained models
-│   └── experiment_tracking/  # Weights & Biases logs
+│   ├── figures/                # Generated plots
+│   ├── tables/                 # Result tables
+│   ├── models/                 # Saved trained models
+│   └── experiment_tracking/    # Weights & Biases logs
 │
-└── 05_reports/           # Monthly progress reports and thesis draft
+└── 05_reports/                 # Monthly progress reports and thesis draft
 ```
 
 ---
@@ -52,7 +52,7 @@ proyecto_wti/
 ## Data Sources
 
 | Source | Data | Frequency |
-|---|---|---|
+| --- | --- | --- |
 | yfinance (`CL=F`) | WTI OHLCV — Open, High, Low, Close, Volume | Hourly |
 | EIA API | U.S. commercial crude oil inventories | Weekly |
 | GDELT Project | News articles (energy, geopolitics) | Real-time |
@@ -62,7 +62,7 @@ proyecto_wti/
 ## Liquidity Variables
 
 | Variable | Definition | Source |
-|---|---|---|
+| --- | --- | --- |
 | Log Volume | Log-transformed hourly trading volume | yfinance |
 | Price Range | High − Low per hour (Parkinson proxy) | yfinance |
 | Amihud Ratio | Absolute return / Volume (Amihud, 2002) | Derived |
@@ -88,26 +88,16 @@ proyecto_wti/
 
 ---
 
-## Setup
-
-```bash
-git clone https://github.com/YOUR_USERNAME/proyecto_wti.git
-cd proyecto_wti
-pip install -r requirements.txt
-```
-
----
-
 ## Progress
 
 | Phase | Status | Description |
-|---|---|---|
-| Phase 0 | ✅ Complete | Data sources, liquidity variables, OLS baseline |
-| Phase 1 | 🔄 In progress | Free-text news source (GDELT) |
-| Phase 2 | ⏳ Pending | NLP pipeline, feature engineering |
-| Phase 3 | ⏳ Pending | Asymmetry modeling (RQ1) |
-| Phase 4 | ⏳ Pending | Temporal modeling (RQ2) |
-| Phase 5 | ⏳ Pending | Thesis writing, optional RQ3 |
+| --- | --- | --- |
+| Phase 0 | Complete | Data sources, liquidity variables, OLS baseline |
+| Phase 1 | In progress | Free-text news source (GDELT) |
+| Phase 2 | Pending | NLP pipeline, feature engineering |
+| Phase 3 | Pending | Asymmetry modeling (RQ1) |
+| Phase 4 | Pending | Temporal modeling (RQ2) |
+| Phase 5 | Pending | Thesis writing, optional RQ3 |
 
 ---
 
