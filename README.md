@@ -1,7 +1,7 @@
 # Modeling News-Driven Liquidity Dynamics in Commodities Markets
 
 **Author:** Enrique Favila Martínez  
-**Program:** MSc Artificial Intelligence — Radboud University  
+**Program:** MSc Artificial Intelligence & Cybersecurity — Radboud University  
 **Host company:** Hammer Market Intelligence  
 **Supervisor:** Dr. Lejla Batina  
 
