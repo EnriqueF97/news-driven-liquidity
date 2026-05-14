@@ -219,7 +219,7 @@
 
 ### Architecture and training
 - Replaced VAR with Temporal Fusion Transformer (TFT) via pytorch-forecasting 1.7.0
-- Training done on Google Colab T4 GPU — M1 MPS had compatibility issues with pytorch-forecasting
+- Training done on Google Colab T4 GPU 
 - Model: hidden_size=32, attention_head_size=4, dropout=0.1, 112k parameters
 - Early stopping triggered at epoch 21, best val_loss=0.204
 - Checkpoint saved locally at `01_data/models/tft_wti.ckpt`
@@ -263,3 +263,101 @@
   - RQ2: lag OLS peak at +6h + TFT attention peak at -4h + daily memory at -27/-28h
 - Optional: run event study for cleaner RQ1 visual
 - Thesis writing — logbook has all material condensed
+
+### Reflect on keeping more data (up to may 2026) or to keep it pre war (feb 2026)
+We are keeping the current TFT model with pre-war news, current val loss = 0.209 which is good. and the lag peak is at 4h, meaning that traders have higher volume after 4 hours the news was published.
+
+---
+
+## Phase 5 — Data Expansion and Pipeline Migration to DB (In Progress)
+
+### Migration from CSV to SQLite database
+- All data now lives in `01_data/wti_thesis.db` — CSVs kept as read-only backups
+- DB tables: `articles`, `liquidity`, `llm_features`, `market_context`, `eia_events`, `opec_events`
+- All notebooks updated to read/write from DB instead of CSV
+
+### EIA events — structured into DB
+- Created `eia_events` table with: `date`, `inventory_mbbl`, `inventory_change`, `news_direction`, `datetime_et`
+- Key fix: `datetime_et` stored as UTC (`15:00+00:00`) after converting from US/Eastern and ceiling to next whole hour
+- 331 weekly records from 2020-01-03 to 2026-05-01
+
+### EIA alignment with market_context
+- Added `eia_surprise` and `is_eia_release` columns to `market_context`
+- Used `pd.merge_asof` with `direction='backward'` — each trading hour gets the most recent EIA value before it
+- `eia_surprise` holds the weekly inventory change, constant across the week until next Wednesday release
+- `is_eia_release = 1` only at the exact hour of publication (Wednesday ~15:00 UTC)
+- Verified: value changes exactly once per EIA week at the correct timestamp
+
+### Market context expansion
+- Re-ran notebook 01 to extend `market_context` to May 2026
+- DXY coverage: 99.9%, VIX coverage: 99.9% (16h forward fill for off-hours)
+- `market_context` now covers May 2024 → May 2026
+
+### GDELT news expansion — new queries added
+- Added 5 high-signal geopolitical queries to existing 8:
+  - `Iran sanctions oil`
+  - `Saudi Arabia oil production`
+  - `China oil demand`
+  - `Russia oil exports`
+  - `oil supply disruption`
+- Downloaded January 2026 → May 2026 gap
+- Raw CSV appended (never replaced) — 51,948 → growing
+- Clean CSV updated to 22,795 English deduplicated articles
+- DB `articles` table updated to 22,795 articles
+- **4,221 new articles** from March 2026 to May 2026
+- **8,918 articles pending body scraping** (new articles + some from expanded queries)
+
+### Body scraping — resumed and near-complete (14 May 2026)
+
+- Notebook 04 rewritten to use DB exclusively: reads `body IS NULL` articles, `UPDATE` per row, commit every 50
+- Resume-capable: re-running skips already-scraped rows
+- Scraper ran in two sessions; 5,970 articles still pending after first pass, reduced to 2,749 after second
+- **Current articles breakdown (22,795 total):**
+  - valid body (`body_valid=1`): **13,550**
+  - invalid body (scraped, failed quality filter): 6,496
+  - still pending (`body IS NULL`): **2,749**
+  - never attempted: 0
+
+---
+
+## Phase 5 — DB Schema and Pipeline State (14 May 2026)
+
+### Current DB schema (`01_data/wti_thesis.db`)
+
+| Table | Rows | Columns |
+|---|---|---|
+| `articles` | 22,795 | `id`, `title`, `datetime`, `domain`, `url`, `body`, `body_valid` |
+| `market_context` | 11,232 | `datetime_hour`, `log_volume`, `price_range`, `log_return`, `amihud`, `dxy`, `vix`, `cushing_inventory`, `eia_surprise`, `is_eia_release` |
+| `liquidity` | 22,795 | `article_id`, `datetime_hour`, `assignment_gap`, `log_volume`, `price_range`, `log_return`, `amihud`, `sentiment_score`, `magnitude`, `event_type`, `entities`, `certainty`, `price_direction`, `time_horizon`, `has_llm_features` |
+| `llm_features` | 12,024 | `article_id`, `sentiment_score`, `magnitude`, `event_type`, `entities`, `certainty`, `price_direction`, `time_horizon` |
+| `eia_events` | 331 | `date`, `inventory_mbbl`, `inventory_change`, `news_direction`, `datetime_et` |
+| `opec_events` | 0 | `id`, `datetime`, `event_type`, `decision`, `production_change_mbpd` |
+
+**Coverage:**
+- `market_context`: May 2024 → May 2026 (hourly, DXY+VIX 99.9% coverage, EIA events aligned)
+- `articles`: May 2024 → May 2026
+
+### Notebook 05 rewrite — CSV → SQLite (14 May 2026)
+
+**What changed:**
+- All reads now come from DB (`articles`, `market_context`, `llm_features`) — no CSV reads or writes
+- Replaced slow `O(n²)` `.apply(get_next_trading_hour)` loop with vectorized `merge_asof(direction='forward')`
+- Inner join articles → market_context: articles beyond coverage are dropped and counted
+- Left join `llm_features` → `has_llm_features` flag added; articles without LLM scores are kept, not dropped
+- `liquidity` now stores LLM feature columns inline (denormalized for TFT training — one table to read)
+- Sanity check: asserts aligned ≥ 13,690 before writing; aborts on merge errors or NULL `log_volume`
+
+**Results after rewrite (full run, 22,795 articles):**
+- Total articles in DB: 22,795
+- Aligned to market_context: **22,795** (0 dropped — all fall within May 2024 → May 2026 window)
+- Contemporaneous (<2h gap): **15,290**
+- Forward-assigned (≥2h, off-hours/weekends): **7,505**
+- With LLM features: **12,024**
+- Without LLM features (pending extraction): **10,771**
+- Date range: 2024-05-13 → 2026-05-12
+
+### Next steps
+- Run nb04 one more time to scrape remaining 2,749 pending articles
+- Run nb06 (LLM feature extraction) for the ~10,771 articles without features
+- Re-run nb05 after LLM extraction to refresh `liquidity` with new feature coverage
+- Re-train TFT on Colab with expanded dataset (~22k aligned rows vs ~10k before)
