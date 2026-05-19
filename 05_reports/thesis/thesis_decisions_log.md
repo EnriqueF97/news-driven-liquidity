@@ -78,6 +78,25 @@ This section captures the in-progress decisions for the second LLM extraction pa
   - A downstream discrete direction feature can be computed deterministically from `sentiment_score` via thresholding.
 - **Thesis writeup:** A short methodological note in the feature engineering section. Demonstrates that feature reduction is justified by analysis of pilot extractions, not arbitrary.
 
+### Add three orthogonal economic channel scores
+
+- **Decision:** Augment the LLM extraction with three new continuous fields alongside `sentiment_score`: `supply_impact`, `demand_impact`, and `risk_premium`. All three on a -1.0 to +1.0 scale.
+- **Reasoning:**
+  - Inter-model calibration (Haiku vs GPT on a 30-article stratified sample) revealed 4 out of 13 usable articles (31%) had sign disagreement on `sentiment_score`. Pearson correlation was 0.39 — too noisy for downstream modeling.
+  - The disagreements concentrated on high-magnitude geopolitical events (Iran-US tensions, UAE-OPEC), which are exactly the cases the model needs to handle correctly.
+  - Root cause: `sentiment_score` conflates two distinct judgments — sentiment of the event vs. direction of WTI price impact. For ambiguous cases (e.g., cartel breakup driving a price surge), the prompt does not disambiguate which channel to weight.
+  - Solution: decompose into orthogonal economic channels. Each channel is a single factual judgment (does supply rise or fall? does demand rise or fall? does the risk premium escalate or de-escalate?) and can be combined into an implied price direction via a fixed economic identity: `implied_direction = -supply_impact + demand_impact + risk_premium`.
+- **`sentiment_score` retained**, not replaced. Three reasons: (a) preserves continuity with the FinBERT headline bias experiment, which compared a single sentiment value, (b) allows ablation studies comparing composite vs. decomposed signals in the TFT, (c) provides a hedge if the channels turn out to be noisy individually.
+- **Calibration plan:**
+  - Re-run the 30-article calibration with the updated prompt (output: `llm_calibration_v2.json`).
+  - Compare inter-model agreement on the three channels (Haiku vs. GPT, same prompt).
+  - Expectation: channels show higher agreement than the composite `sentiment_score`, because each channel is a more constrained factual judgment. Sign disagreements on `sentiment_score` may persist — that is acceptable, as the channels carry the cleaner signal.
+- **Modeling implications:**
+  - The TFT-v2 feature set grows by 3 continuous reals.
+  - Variable Selection Network feature importance will indicate whether the model uses the channels, the composite, or both.
+  - Optional ablation in the results chapter: compare TFT performance with sentiment_score only, channels only, and all four. Not required for the thesis, but a clean addendum if time permits.
+- **Thesis writeup:** Methods chapter — the feature engineering section gets a subsection on the decomposition. Frame the move as a response to a documented calibration failure: _"Initial extraction used a single composite sentiment score, but inter-model calibration revealed systematic sign disagreement on high-magnitude geopolitical events (X/Y articles, correlation Z). The score was decomposed into three orthogonal economic channels — supply, demand, and geopolitical risk — to isolate LLM judgment to factual extraction rather than economic reasoning. The composite score was retained for backward compatibility with the headline bias experiment."_ This positions the decomposition as a principled methodological refinement, not an afterthought.
+
 ### `event_type` as a list
 
 - **Decision:** Change `event_type` from a single string to an array of 1-3 categories ordered by salience.
@@ -164,6 +183,10 @@ This section captures the in-progress decisions for the second LLM extraction pa
 - **Daily memory effect at −27/−28h in TFT attention.** Genuinely interesting but needs an interpretation. Is it traders revisiting positions at the same time the next day, overnight cycle effects, or an artifact of the encoder window interacting with `is_us_session`? Worth a paragraph in the discussion but worth thinking through _why_ first.
 - **Robustness check for the alignment rule (ceiling vs floor vs round).** A 30-minute experiment that would strengthen the methods chapter. Re-run lag OLS with floor alignment; report whether the lag-peak shifts.
 - **Pre-war vs post-war TFT comparison.** The first TFT was trained on pre-war (Feb 2026) data. The retraining will include the post-war expansion. The pre-war model's clean results were the original publishable finding; the post-war model is an extension. Both should be reported, with discussion of how (or whether) the geopolitical shock affected the model.
+
+### News Calibration V1 vs V2 for TFT V2
+
+Initial extraction used a single composite sentiment_score field. Cross-model calibration on a stratified sample of 30 articles revealed substantial sign disagreement on high-magnitude geopolitical events (4/13 usable articles, 31%), with Pearson correlation of only 0.39 between Haiku and a GPT-family reference model. Diagnostic inspection identified the root cause: sentiment_score conflates event valence with directional price impact, and these can diverge sharply on cartel breakup, conflict de-escalation, and similar nonlinear cases. The extraction schema was extended to include three orthogonal economic channels — supply_impact, demand_impact, and risk_premium — each capturing a single factual judgment on a [-1, +1] scale. Re-calibration showed cross-model agreement substantially improved: per-channel correlations of 0.94 (supply), 0.96 (demand), and 0.82 (risk premium), with zero or one sign disagreement per channel. As a downstream effect, sentiment_score agreement also improved from r=0.39 to r=0.88, suggesting that the decomposed reasoning structure stabilized the composite judgment. Channel orthogonality was preserved (all within-model pairwise correlations |r| < 0.5), confirming that the three fields capture distinct economic dimensions rather than redundant copies of the composite."
 
 ---
 
