@@ -23,10 +23,10 @@ The Phase 1 analyses operated on a combined dataset of 13,690 articles: 7,756 wi
 **Table 4.1** summarises the Phase 1 dataset construction.
 
 | Stage                                                | Count                               |
-| ---------------------------------------------------- | ----------------------------------- | --- |
+| ---------------------------------------------------- | ----------------------------------- |
 | Raw GDELT articles                                   | 51,948                              |
 | After deduplication + English filter                 | 16,326                              |
-| With successful body retrieval (~80% of 16,326)      | ~13,000                             |     |
+| With successful body retrieval                       | ~13,000 (80% of 16,326)             |
 | With `body_valid=1` (regex-passed body)              | 7,756                               |
 | Title-only fallback (body failed but title retained) | 5,934                               |
 | **Phase 1 modeling dataset**                         | **13,690**                          |
