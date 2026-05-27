@@ -1,4 +1,4 @@
-# Chapter 3 — Methods
+# Chapter 3 - Methods
 
 ## 3.1 Data sources and acquisition
 
@@ -66,7 +66,7 @@ Russia oil exports
 oil supply disruption
 ```
 
-The expanded scrape was extended through May 2026, raising the total corpus to 22,795 article records spanning January 2024 to May 2026. Across the full Phase 2 corpus, 20,046 articles produced a real body; the remaining 2,749 yielded either a null response, a Cloudflare or paywall block, or an explicit fetch error. The choice to forward articles without bodies into LLM-based filtering rather than retain a title-only fallback path is discussed in Section 3.4.
+The expanded scrape was extended through May 2026, raising the total corpus to 22,795 article records spanning January 2024 to May 2026. Across the full Phase 2 corpus, 19,619 articles produced a real body; the remaining 2,749 yielded either a null response, a Cloudflare or paywall block, or an explicit fetch error. The choice to forward articles without bodies into LLM-based filtering rather than retain a title-only fallback path is discussed in Section 3.4.
 
 ### 3.1.5 Persistence
 
@@ -149,7 +149,7 @@ The Haiku extraction underwent one schema iteration during Phase 2. The initial 
 
 The Haiku extraction uses Anthropic's tool-use API [N] with `tool_choice` forcing the model to invoke a single `extract_article_features` tool. This is not a stylistic choice; it is a methodological one. Tool-use enforces the output schema at the API level, including enumerated values for categorical fields, type constraints on numeric fields, and required-field validation. An earlier extraction pass that relied on the LLM to produce valid JSON via prompt instruction alone produced occasional schema violations (e.g., the model returning `slightly_bullish` instead of a numeric score, or `medium_term` instead of one of the three valid `time_horizon` values). With tool-use enforcement these failures become impossible at the API boundary, eliminating an entire class of parsing brittleness from the pipeline.
 
-The tool-use design also enables a short-circuit optimisation. When the model determines that an article is unusable (a paywall block, a cookie notice, or off-topic content), only the `usable` field is required to be set; all other fields are optional. The model exploits this to return roughly 10 output tokens instead of 200 on unusable articles, reducing the cost of the full extraction batch by approximately 30%.
+The tool-use design also enables a short-circuit optimisation. When the model determines that an article is unusable (a paywall block, a cookie notice, or off-topic content), only the `usable` field is required to be set; all other fields are optional. The model exploits this to return roughly 10 output tokens instead of 200 on unusable articles, reducing the cost of unusable-article extraction by roughly 90% at the per-article output level.
 
 ### 3.3.4 Channel decomposition
 
@@ -165,7 +165,7 @@ The composite `sentiment_score` is retained alongside the channels rather than r
 
 ### 3.3.5 Magnitude, event type, entities, certainty, and time horizon
 
-The remaining fields in the Haiku schema capture orthogonal dimensions of news content. `magnitude` is a continuous score in [0, 1] measuring how market-moving an event is, with anchors provided in the prompt (routine update = 0.1, major OPEC cut = 0.9, full-scale geopolitical crisis = 1.0). `event_type` is an array of one to three categorical labels drawn from a fixed set of six values (`geopolitical`, `supply`, `demand`, `macro`, `technical`, `other`), ordered by salience within the article. `entities` is a list of named actors central to the article (countries, organisations, oil companies, key officials). `certainty` is a continuous score in [0, 1] distinguishing rumour, analyst forecast, and confirmed fact. `time_horizon` is a categorical label drawn from `immediate` (hours to a day), `short_term` (days to weeks), and `structural` (months or longer themes such as energy transition).
+The remaining fields in the Haiku schema capture orthogonal dimensions of news content. `magnitude` is a continuous score in [0, 1] measuring how market-moving an event is, with anchors provided in the prompt (0.0 = negligible event, 1.0 = historic; most articles score in the 0.1–0.4 range, with a major OPEC cut anchored at 0.9 and a full-scale geopolitical crisis at 1.0). `event_type` is an array of one to three categorical labels drawn from a fixed set of six values (`geopolitical`, `supply`, `demand`, `macro`, `technical`, `other`), ordered by salience within the article. `entities` is a list of named actors central to the article (countries, organisations, oil companies, key officials). `certainty` is a continuous score in [0, 1] distinguishing rumour, analyst forecast, and confirmed fact. `time_horizon` is a categorical label drawn from `immediate` (hours to a day), `short_term` (days to weeks), and `structural` (months or longer themes such as energy transition).
 
 Each of these fields encodes information that FinBERT's three-class output cannot represent, and each enters the TFT v2 model either as a continuous input or as a categorical that the model's Variable Selection Network can weight independently. The design rationale for each field, including the choice to encode `event_type` as a list rather than a single value and the choice to handle entity normalisation in post-processing rather than in the prompt, is discussed in Section 4.3.2.
 
@@ -182,7 +182,7 @@ The Phase 1 filter, named `body_valid`, is an allow-list applied to the article 
 - Minimum length of 400 characters (excluding whitespace and HTML residues)
 - Presence of at least one term from a domain-specific keyword list covering energy, financial, and geopolitical vocabulary
 - Absence of press-release boilerplate (vendor blacklist for known PR-distribution patterns)
-- ALL-CAPS ratio below a configurable threshold (excluding scraped pages that are predominantly menu links or category headers)
+- An all-caps ratio below 30%, computed over words of more than two characters in texts containing more than ten words (excluding scraped pages that are predominantly menu links, category headers, or stock-ticker listings)
 
 The filter was developed iteratively over the early project, starting as a blacklist of known bad phrases (Cloudflare error text, cookie notices) and evolving into the allow-list form described above. On the Phase 1 corpus of 16,326 articles with English text and successful body retrieval, the filter classified 7,756 articles (47.5%) as having valid bodies. The remainder were either retained with title-only sentiment as a fallback or excluded from the Phase 1 analyses depending on the specific notebook (Section 4.2.1 details which analyses used which subset).
 
@@ -350,7 +350,7 @@ The two output sets are then aligned by article identifier and compared field by
 For each field in the schema, we compute one or more of the following agreement measures, chosen to match the field's type:
 
 - For binary fields (`usable`): agreement rate as a count out of thirty, and Cohen's kappa to correct for chance agreement
-- For continuous fields (`sentiment_score`, `supply_impact`, `demand_impact`, `risk_premium`, `magnitude`, `certainty`): Pearson correlation across all pairs, mean absolute difference (MAD), and the count of _sign disagreements_, defined as cases where one model's score exceeds +0.1 and the other's falls below -0.1 (or vice versa)
+- For continuous fields (`sentiment_score`, `supply_impact`, `demand_impact`, `risk_premium`, `magnitude`, `certainty`): Pearson correlation across all pairs, mean absolute difference (MAD), and the count of **sign disagreements**, defined as cases where the two models' scores have opposite signs (one positive, one negative). Near-zero scores within a small range around zero are treated as agreement on neutrality and do not contribute to the sign-disagreement count.
 - For categorical fields (`event_type`, `time_horizon`): exact-match agreement rate, and for the array-valued `event_type`, the proportion of cases where the top-ranked category from one model appears anywhere in the other model's list
 
 The sign-disagreement count for continuous fields is the most methodologically important measure. A small mean absolute difference can mask cases where the two models disagree on the qualitative direction of an effect (one rates an event bullish, the other bearish), which is precisely the kind of disagreement that would propagate as noise into downstream models. The sign-disagreement count surfaces these cases explicitly.
