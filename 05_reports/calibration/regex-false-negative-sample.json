@@ -1,0 +1,252 @@
+[
+  {
+    "id": 3709,
+    "title": "Stock market today : Indexes edge up as traders digest wholesale inflation data",
+    "domain": "finance.yahoo.com",
+    "body_length": 250,
+    "body_preview": "The producer price index came in higher than estimates, gaining 0.5% in April. Major indexes were slightly higher after the data as investors assessed the impact on rate cut outlooks. Fed Chairman Jerome Powell is scheduled to speak later on Tuesday.",
+    "sentiment_score": -0.3,
+    "event_type": "[\"macro\"]",
+    "usable": false
+  },
+  {
+    "id": 17046,
+    "title": "Beijing First ? Canada PM Carney Opens The Doors To Chinese EVs",
+    "domain": "zerohedge.com",
+    "body_length": 1008,
+    "body_preview": "The invasion of Chinese electric vehicles into North America is set to accelerate after Canadian Prime Minister Mark Carney agreed to roll back the triple-digit tariffs previously imposed on Chinese EVs. The move sharply diverges from President Trump's America First policy, which aims to revitalize the North American auto industry. While Chinese EVs remain effectively blocked from US import, there has been a noticeable increase in BYD Motor vehicles on highways in Mexico. Canadian Prime Minister Mark Carney, who appears to have deep ties with Beijing, was the first prime minister to visit Chin",
+    "sentiment_score": -0.3,
+    "event_type": "[\"demand\", \"macro\", \"other\"]",
+    "usable": false
+  },
+  {
+    "id": 9867,
+    "title": "OPEC+ Sticks to Supply Plan Even as Trump Seeks Oil Price Cut",
+    "domain": "yahoo.com",
+    "body_length": 320,
+    "body_preview": "(Bloomberg) -- OPEC+ didn’t make any changes to its existing oil-production plans at a review meeting on Monday, even as President Donald Trump called on the group to lower crude prices. New York’s First ‘Passive House’ School Is a Model of Downtown Density State Farm Seeks Emergency California Rate Hike After LA Fires",
+    "sentiment_score": 0.0,
+    "event_type": "[\"supply\", \"geopolitical\"]",
+    "usable": true
+  },
+  {
+    "id": 14860,
+    "title": "Oil dips on oversupply sentiment , sanctions limit decline",
+    "domain": "rte.ie",
+    "body_length": 377,
+    "body_preview": "Oil prices fell sharply today following a report of a US proposal to end the Russian war in Ukraine, as oversupply concerns continued to weigh on prices. Brent crude futures fell $1.81, or 2.8%, to $63.08 a barrel by 1330 GMT, after gaining 1.1% the previous session. US West Texas Intermediate crude futures fell $1.74, or 2.86%, to $59 a barrel, after rising 1.4% on Tuesday.",
+    "sentiment_score": -0.65,
+    "event_type": "[\"geopolitical\", \"supply\"]",
+    "usable": true
+  },
+  {
+    "id": 12256,
+    "title": "Oil Prices Climb on Court Ruling , Russian Sanction Risks , and OPEC+ Speculation",
+    "domain": "econotimes.com",
+    "body_length": 233,
+    "body_preview": "Asia FX Weekly Gains Hold Amid U.S. Inflation Data and Iran Ceasefire Uncertainty Bank of Japan Governor Signals Accommodative Stance Amid Negative Real Rates Middle East Conflict Threatens Global Economic Stability, World Bank Warns",
+    "sentiment_score": 0.6,
+    "event_type": "[\"geopolitical\", \"supply\", \"macro\"]",
+    "usable": true
+  },
+  {
+    "id": 20445,
+    "title": "Modest growth projected for 2026 as uncertainty from Iran war , trade linger : Deloitte",
+    "domain": "therecord.com",
+    "body_length": 409,
+    "body_preview": "A Deloitte sign is pictured in Ottawa on Thursday, Dec. 11, 2025. THE CANADIAN PRESS\/Sean Kilpatrick The Canadian economy is expected to see modest growth this year, but the ongoing war in the Middle East and continued trade uncertainty are among the risks to that projection. Deloitte’s spring economic outlook released Thursday estimated 1.2 per cent growth in 2026, down from last year’s 1.7 per cent gain.",
+    "sentiment_score": -0.3,
+    "event_type": "[\"macro\", \"geopolitical\"]",
+    "usable": false
+  },
+  {
+    "id": 2812,
+    "title": "Europe Roundup : Euro gains against dollar , European shares dip , Gold hits record high , Oil prices steady after drop as Middle East ceasefire hopes wane",
+    "domain": "econotimes.com",
+    "body_length": 381,
+    "body_preview": "Asia Roundup: Dollar sluggish with market on edge ,Asian stocks fall, Gold drops 1% , Oil rises -March 26th ,2026 Asia Roundup: Dollar edges higher as Trump's Iran deadline keeps markets on edge, Gold muted , Oil prices climb- April 6th ,2026 Europe Roundup: Pound rises on Iran war de-escalation expectations, European shares jumps, Gold extends gains , Oil slides –April 1st,2026",
+    "sentiment_score": -0.3,
+    "event_type": "[\"geopolitical\", \"macro\"]",
+    "usable": true
+  },
+  {
+    "id": 13214,
+    "title": "The Latest : Markets react negatively to Trump latest tariffs moves and weak jobs report",
+    "domain": "ksat.com",
+    "body_length": 406,
+    "body_preview": "Copyright 2025 The Associated Press. All rights reserved. President Donald Trump signs an executive order restarting the Presidential Fitness Test in public schools, Thursday, July 31, 2025, in the Roosevelt Room of the White House in Washington. (AP Photo\/Jacquelyn Martin) President Donald Trump’s latesttariff movesdrew worries from Wall Street Friday as stocks slumped and Treasury yields fell sharply.",
+    "sentiment_score": -0.6,
+    "event_type": "[\"macro\", \"demand\"]",
+    "usable": true
+  },
+  {
+    "id": 7888,
+    "title": "Oil prices surge after OPEC+ decision to delay output increase",
+    "domain": "news.az",
+    "body_length": 144,
+    "body_preview": "Oil prices continued to rise on Monday, gaining more than $1 per barrel after OPEC+ announced a one-month delay in plans to increase production.",
+    "sentiment_score": 0.7,
+    "event_type": "[\"supply\"]",
+    "usable": true
+  },
+  {
+    "id": 1174,
+    "title": "Report : Shell resumes oil supply to PHarcourt refinery ... 475k barrels",
+    "domain": "thecable.ng",
+    "body_length": 250,
+    "body_preview": "Shell Nigeria says it has resumed the supply of crude oil from its Bonny export terminal to Port Harcourt refinery. Bamidele Odugbesan, Shell’s spokesperson, spoke toReuterson Friday. Odugbesan said oil deliveries to the refinery were made this week.",
+    "sentiment_score": 0.3,
+    "event_type": "[\"supply\", \"other\"]",
+    "usable": true
+  },
+  {
+    "id": 9838,
+    "title": "Phillips 66 reports fourth - quarter results and announces next phase of strategic initiatives – Oil & Gas 360",
+    "domain": "oilandgas360.com",
+    "body_length": 901,
+    "body_preview": "HOUSTON–(BUSINESS WIRE)–Phillips 66 (NYSE: PSX), a leading integrated downstream energy provider, announced fourth-quarter earnings. “During the fourth quarter, we achieved our strategic priority targets for shareholder distributions and asset dispositions,” said Mark Lashier, chairman and CEO. “We also delivered on our goal of improving Refining performance by continuing to run above industry-average crude utilization, setting record clean product yields and achieving our targeted cost reductions of $1 per barrel. “In support of our Midstream wellhead-to-market strategy, we recently announced",
+    "sentiment_score": 0.3,
+    "event_type": "[\"other\"]",
+    "usable": false
+  },
+  {
+    "id": 9169,
+    "title": "Is ConocoPhillips ( COP ) Among the Top Oil and Gas Stocks To Invest In According to Hedge Funds ? ",
+    "domain": "insidermonkey.com",
+    "body_length": 1047,
+    "body_preview": "We recently published a list ofTop 12 Oil and Gas Stocks To Invest In According to Hedge Funds. In this article, we are going to take a look at where ConocoPhillips (NYSE:COP) stands against oil and gas stocks to invest in according to hedge funds. With a record average production of 12.9 million barrels per day in 2023, the United States is theBiggest Oil Producing Country in the World. Every year, the indigenous production of oil and gas helps save American consumers an estimated $203 billion, or $2,500 for each family of four. Moreover, the oil and gas industry supports over 12 million Amer",
+    "sentiment_score": 0.3,
+    "event_type": "[\"demand\", \"other\"]",
+    "usable": false
+  },
+  {
+    "id": 2775,
+    "title": "News Highlights : Top Energy News of the Day - Tuesday at 12 AM ET - April 09 , 2024 at 12 : 15 am EDT",
+    "domain": "marketscreener.com",
+    "body_length": 356,
+    "body_preview": "Published on 04\/08\/2024 at 10:15 pm EDT - Modified on 04\/09\/2024 at 12:15 am EDT Oil futures declined on Monday, but settled above the session's lowest levels, as traders monitored risks to crude supplies in the Middle East. More utilities across the West are facing the prospect of significant liability costs as climate change and drought increase risks.",
+    "sentiment_score": -0.2,
+    "event_type": "[\"geopolitical\", \"supply\"]",
+    "usable": true
+  },
+  {
+    "id": 6284,
+    "title": "LONDON MARKET CLOSE : Stocks suffer as commodity sell - off gathers pace",
+    "domain": "lse.co.uk",
+    "body_length": 399,
+    "body_preview": "Visit our new Alternative Investment section.Click here (Alliance News) - London'sFTSE 100fell sharply on Tuesday as mining and oil stocks slid and figures showed a further drop in manufacturing activity in the US. The FTSE 100 index closed down 65.38 points, 0.8%, at 8,298.46. TheFTSE 250ended down 171.95 points, 0.8%, at 20,808.56, and the AIM All-Share closed down 4.51 points, 0.6%, at 762.39.",
+    "sentiment_score": -0.4,
+    "event_type": "[\"demand\", \"macro\"]",
+    "usable": true
+  },
+  {
+    "id": 22729,
+    "title": "Japan Receives First Central Asian Crude Since Iran War Began",
+    "domain": "oilprice.com",
+    "body_length": 346,
+    "body_preview": "India Pushes U.S. to Extend Russian Oil Waiver as Imports Hit Record High Tsvetana is a writer for Oilprice.com with over a decade of experience writing for news outlets such as iNVEZZ and SeeNews. Japan is set to receive this week the first crude tanker from Central Asia since the war in Iran began, the Japanese Industry Ministrysaidon Monday.",
+    "sentiment_score": 0.3,
+    "event_type": "[\"supply\", \"geopolitical\"]",
+    "usable": true
+  },
+  {
+    "id": 15897,
+    "title": "PBF Energy ( PBF ) Climbs 13 . 8 % as Venezuela Oil Seizure Sparks Rosy Prospects",
+    "domain": "finance.yahoo.com",
+    "body_length": 689,
+    "body_preview": "We recently publishedWall Street Can’t Keep up With These 10 Stocks on Fire. PBF Energy Inc. (NYSE:PBF) was one of the top performers on Thursday. PBF Energy saw its share prices jump by 13.85 percent on Thursday to finish at $32.15 apiece after an investment firm turned bullish for the company, backed by optimism that it would benefit from the US government’s seizure of up to 50 million barrels of sanctioned oil from Venezuela. In a market report, Piper Sandler upgraded PBF Energy Inc. (NYSE:PBF) to “overweight” from “underweight” previously, but lowered its price target to $40 from $42. Stil",
+    "sentiment_score": 0.6,
+    "event_type": "[\"supply\", \"geopolitical\"]",
+    "usable": true
+  },
+  {
+    "id": 12995,
+    "title": "Asian refiners boost Kazakhstan CPC Blend purchases amid Mediterranean oversupply",
+    "domain": "invezz.com",
+    "body_length": 377,
+    "body_preview": "Kazakhstan CPC Blend crude is seeing increased purchases by Asian refiners for August loadings compared to July.Â The rise in purchases is attributed to lower European demand, which hasdriven down prices, according to a Reuters report.Â Consequently, Asian demand for comparable light-sour crude grades, like Abu Dhabi's Murban, is likely to be constrained, the report claimed.",
+    "sentiment_score": -0.3,
+    "event_type": "[\"demand\", \"supply\"]",
+    "usable": true
+  },
+  {
+    "id": 20322,
+    "title": "When supply isnt enough : Global energy system built on fragile routes , shift to clean energy way ahead , finds report",
+    "domain": "downtoearth.org.in",
+    "body_length": 225,
+    "body_preview": "Global oil and gas supply remains strong, but energy security risks persist Over two-thirds of seaborne energy trade depends on a few key chokepoints Strait of Hormuz disruption highlights vulnerability of global energy flows",
+    "sentiment_score": -0.3,
+    "event_type": "[\"geopolitical\", \"supply\"]",
+    "usable": true
+  },
+  {
+    "id": 4815,
+    "title": "Oil stable above $85",
+    "domain": "thedailystar.net",
+    "body_length": 393,
+    "body_preview": "Copyright: Any unauthorized use or reproduction of The Daily Star content for commercial purposesis strictly prohibited and constitutes copyright infringement liable to legal action. Brent oil futures were steady on Thursday, hovering slightly below seven-week highs as the market awaited US inventory data. August Brent crude rose by 18 cents, or 0.21 percent, to $85.25 a barrel by 1023 GMT.",
+    "sentiment_score": 0.0,
+    "event_type": "[\"technical\"]",
+    "usable": true
+  },
+  {
+    "id": 12212,
+    "title": "Oil rises on Venezuelan supply risks but OPEC+ output caps gains",
+    "domain": "marketscreener.com",
+    "body_length": 386,
+    "body_preview": "Published on 05\/27\/2025 at 09:09 pm EDT - Modified on 05\/28\/2025 at 05:11 pm EDT NEW YORK (Reuters) -Oil prices gained more than 1% on Wednesday on supply concerns as OPEC+ agreed to leave their output policy unchanged and as the U.S. barred Chevron from exporting Venezuelan crude. Investors previously anticipated members of OPEC+ would agree to a production increase later this week.",
+    "sentiment_score": 0.35,
+    "event_type": "[\"supply\", \"geopolitical\"]",
+    "usable": true
+  },
+  {
+    "id": 18460,
+    "title": "U . S . Announces Tariff Framework Targeting Countries That Acquire Goods Or Services From Iran",
+    "domain": "mondaq.com",
+    "body_length": 1669,
+    "body_preview": "Greenberg Traurig, LLP has more than 3,100 lawyers across 51 locations in the United States, Europe, the Middle East, Latin America, and Asia. The firm’s broad geographic and practice range enables the delivery of innovative and strategic legal services across borders and industries. Recognized as a 2025 BTI “Best of the Best Recommended Law Firm” by general counsel for trust and relationship management, Greenberg Traurig is consistently ranked among the top firms on the Am Law Global 100, NLJ 500, and Law360 400. Greenberg Traurig is also known for its philanthropic giving, culture, innovatio",
+    "sentiment_score": 0.3,
+    "event_type": "[\"geopolitical\", \"macro\"]",
+    "usable": true
+  },
+  {
+    "id": 4017,
+    "title": "America Roundup : Dollar dips on profit - taking but upbeat outlook remains , Wall Street ends higher , Gold loses momentum , Oil records weekly loss amid fuel demand concerns from interest rate policy",
+    "domain": "econotimes.com",
+    "body_length": 360,
+    "body_preview": "Asia Roundup: Dollar gains, US-Iran talks in focus, Asian equities rise, Gold slips, Oil climbs - April 10th ,2026 America’s Roundup: Dollar falls as US-Iran ceasefire emboldens investors, Wall Street ends sharply higher, Gold pares gains Europe Roundup: Euro recovers some ground against dollar, European stocks gain, Gold rises more than 1% -March 31st ,2026",
+    "sentiment_score": -0.3,
+    "event_type": "[\"macro\", \"geopolitical\", \"demand\"]",
+    "usable": true
+  },
+  {
+    "id": 6604,
+    "title": "How plunging oil prices could help the US avoid recession",
+    "domain": "finance.yahoo.com",
+    "body_length": 288,
+    "body_preview": "Brent crude has fallen below a key threshold of $70 per barrel, and analysts expect it to fall further. Falling oil prices lessen the odds of a US recession, market veteran Ed Yardeni said. He notes that cheaper energy reduces cost burdens in manufacturing, construction, and agriculture.",
+    "sentiment_score": 0.6,
+    "event_type": "[\"macro\", \"demand\"]",
+    "usable": true
+  },
+  {
+    "id": 10305,
+    "title": "Will you pay more for gas under the new Canada tariffs ? Depends on where you live",
+    "domain": "us.cnn.com",
+    "body_length": 383,
+    "body_preview": "The US tariffs on Canadian fuel imports could hit some parts of the country harder than others. The Northeast could see that change first, according to experts, and prices are also at risk of rising on the West Coast. But even those potential hikes would be unlikely to be come immediately. The tariffs put in place Tuesday were 25% for most imports but only 10% for energy products.",
+    "sentiment_score": -0.6,
+    "event_type": "[\"supply\", \"macro\"]",
+    "usable": false
+  },
+  {
+    "id": 15152,
+    "title": "Russia Stocks Close Flat as MOEX Hits 1 - Month High",
+    "domain": "econotimes.com",
+    "body_length": 214,
+    "body_preview": "Asian Currencies Hold Steady as Middle East Ceasefire Doubts Weigh on Markets Asian Stocks Rally on Ceasefire Hopes and Bargain Buying U.S.-Iran Ceasefire: Fragile Truce Raises Hopes for Strait of Hormuz Peace Deal",
+    "sentiment_score": 0.3,
+    "event_type": "[\"geopolitical\", \"demand\", \"macro\"]",
+    "usable": null
+  }
+]

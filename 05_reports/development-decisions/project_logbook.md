@@ -536,3 +536,5 @@ We are keeping the current TFT model with pre-war news, current val loss = 0.209
 **TODO before TFT v2 training: notebook 05 currently does not propagate DXY and VIX from market_context to liquidity. Add these columns to the alignment step before training, or the TFT v2 macro covariates will be empty.**
 
 **TODO PIPELINE to create the entities list for the dataset, rightnow there are different ways of naming a single entity**
+
+**TODO refine llm judged articles that may include false positives like EV industry**
