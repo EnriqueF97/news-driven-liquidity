@@ -538,3 +538,203 @@ We are keeping the current TFT model with pre-war news, current val loss = 0.209
 **TODO PIPELINE to create the entities list for the dataset, rightnow there are different ways of naming a single entity**
 
 **TODO refine llm judged articles that may include false positives like EV industry**
+
+## TFT v2 Training — Prep Plan and TODO
+
+### Status snapshot
+
+- **Thesis writing**: Chapter 3 complete and reviewed by Lejla. Chapter 4 §4.2 (Phase 1) and §4.3.1–§4.3.6 (Phase 2 except TFT v2) drafted and verified. Outline updated to reflect the FinBERT/Haiku phase boundary.
+- **Blocked on TFT v2 training**: §4.3.7, §4.3.8, §4.4 (partially), Chapter 5, Chapter 6.
+
+### Locked decisions
+
+**Prediction horizon**: multi-horizon `[1, 3, 6, 12, 28]` hours. Single model, one forward pass produces all horizons. The 28h anchor tests the v1 daily-memory attention finding at lag −27/−28h. Honest framing required in §4.3.7: absolute accuracy at 28h will be poor; what matters is the _shape_ of the per-horizon error curve.
+
+**Target variables**: multi-target `[log_volume, amihud, price_range]`. TFT supports this natively. Training cost ~5x v1.
+
+**Train/val/test split**: 70/15/15 temporal. Real held-out test set, touched once at the end. With ~11,000+ hours: ~7,700 train / ~1,650 val / ~1,650 test.
+
+**Compute**: Colab Pro upgrade (A100/L4/V100 instead of T4). ~5–10× speedup. ~$10/month, cancel after.
+
+**Ablation strategy**: iterative with sub-version names (v2.0, v2.1, v2.2...). All variants use Haiku v2 features (channels + composite sentiment + magnitude + certainty + entities + event_type + time_horizon).
+
+Default 3-training plan:
+
+1. **v2.0 baseline** — Haiku v2 features used in a v1-style minimal way: int-encoded categoricals (event_type, time_horizon), no entity flags, single horizon (1h), single target (log_volume). Tests: "does the channel decomposition alone help, when used as v1 used composite sentiment?"
+2. **v2.1 proper categoricals** — v2.0 + proper categorical encoding for `event_type` and `time_horizon` (not int-encoded). Single horizon, single target. Tests: "do proper categoricals add signal on top of channels?"
+3. **v2.2 full** — v2.1 + multi-hot entity flags (top 15–20 canonical) + multi-horizon `[1, 3, 6, 12, 28]` + multi-target `[log_volume, amihud, price_range]`. Production v2, subject of §4.3.7.
+
+Can expand to 5 ablations if 3 don't cleanly attribute improvements. Infrastructure should support both.
+
+**Success criteria (set in advance)**:
+
+1. Channels are economically interpretable in attention/importance (qualitative)
+2. Directional asymmetry test reaches p<0.05 (quantitative RQ2)
+3. Multi-horizon error structure matches lag OLS peak at +6h (RQ1)
+
+Scoring: 3/3 strong; 2/3 solid; 1/3 partial; 0/3 negative result, all discussed honestly in Chapter 5.
+
+### Engineering prep tasks (do in order, before any training)
+
+**Task 1 ✅ — Fix notebook 05 to propagate DXY/VIX into `liquidity`**. (completed 2026-05-30)
+The DB migration accidentally dropped these. In notebook 05, add `dxy` and `vix` to both the `market_context` column selection and the final `df_liquidity` projection. Re-run notebook end-to-end. Verify with:
+
+```sql
+SELECT COUNT(*),
+       SUM(CASE WHEN dxy IS NOT NULL THEN 1 ELSE 0 END) AS with_dxy,
+       SUM(CASE WHEN vix IS NOT NULL THEN 1 ELSE 0 END) AS with_vix
+FROM liquidity;
+```
+
+Both should be near 22,795.
+
+**Task 2 ✅ — Entity normalization** (`02_notebooks/12_entity_normalization.ipynb`). (completed 2026-06-01)
+Materialize `raw_entity_counts` from `llm_features.entities`, triage by frequency, maintain `ENTITY_CANONICAL` / `CANONICAL_ENTITIES` in `llm_features.py`, write `article_entities` (long-format article_id × canonical_entity). Entity flags (top canonicals) feed TFT v2.2.
+
+**Task 3 ✅ — EV/off-topic cleanup heuristic**. (completed 2026-06-01)
+Manual audit (§4.3.3) found LLM `usable=true` includes some off-topic articles. Find them:
+
+```sql
+SELECT a.id, a.title, lf.sentiment_score, lf.event_type
+FROM articles a
+JOIN llm_features lf ON a.id = lf.article_id
+WHERE lf.usable = 1
+  AND lf.supply_impact = 0
+  AND lf.demand_impact = 0
+  AND lf.risk_premium = 0
+  AND lf.sentiment_score != 0
+ORDER BY ABS(lf.sentiment_score) DESC
+LIMIT 50;
+```
+
+Recommendation: flag with `usable_strict` column, don't drop. Allows A/B in ablation.
+
+**Task 4 — Lock train/val/test indices**.
+Once `liquidity` is refreshed, compute split points based on final hourly grid size. Save as constants in the training notebook so all ablation variants use identical splits.
+
+**Task 5 — Scaffold TFT v2 training notebook** `02_notebooks/13_tft_v2_training.ipynb`.
+Use a single `ABLATION_VARIANT` constant (`'v2.0'`, `'v2.1'`, `'v2.2'`) at the top that gates which features are included. Avoids three near-identical notebooks. Structure:
+
+- Load liquidity + llm_features (with new entity flags)
+- Apply EV cleanup if enabled
+- Construct `TimeSeriesDataSet` per variant
+- Train, checkpoint to `01_data/models/tft_v2_X.ckpt`
+- Mirror notebook 10 analysis: per-target/horizon loss, VSN importance, attention by sentiment direction, RQ2 t-test
+
+### Open questions for training session
+
+- Final thesis-facing naming (v2.0/v2.1/v2.2 working; may collapse to "TFT v2" with intermediate ablations as prose mentions in §4.3.7)
+- 3 vs 5 ablation runs — decide based on what data shows
+- §4.3.7 vs §4.3.8 split — likely §4.3.7 = ablation trajectory, §4.3.8 = v1 vs v2 headline comparison. Decide after results.
+- §4.4 alignment robustness check (ceiling vs floor on Phase 1 lag OLS): independent of v2, ~30 min experiment. Could be a warm-up.
+
+### What's NOT in this TODO
+
+Chapter 2 Background drafting; Chapter 1 Introduction; Appendix assembly; Discussion/Conclusion drafting; supervisor feedback integration. Separate workstream notes if needed.
+
+---
+
+## Phase 5 — Notebook 05 alignment run (2026-05-30)
+
+### Alignment results
+
+**Schema:**
+
+- `liquidity` includes: `usable`, `supply_impact`, `demand_impact`, `risk_premium`, `dxy`, `vix`
+- `price_direction` dropped; `body_valid` no longer propagated (superseded by `usable`)
+- `usable=1` is the canonical downstream filter for modeling
+
+**Pipeline:**
+
+- All reads from `wti_thesis.db` — no CSV reads
+- Vectorized `merge_asof(direction='forward')` replaces the old `.apply()` loop
+- Left join `llm_features` → `has_llm_features` and `usable` flags
+- Sanity check: assert aligned >= 22,000 before writing
+- `DROP TABLE IF EXISTS liquidity` before write — no stale rows
+
+**Results:**
+
+- Total articles in DB: 22,795
+- Aligned to market_context: 22,795
+- Dropped (out of range): 0
+- Contemporaneous (<2h gap): 15,290
+- Forward-assigned (>=2h): 7,505
+- Modeling-ready (usable=1): 11,675 ← canonical filter
+- LLM-rejected (usable=0, LLM called): 7,944
+- No-body (no LLM called): 3,176
+
+**Channel coverage:**
+
+- supply_impact, demand_impact, risk_premium non-null iff usable=1 (11,675 rows)
+- All three channel counts verified equal to usable=1 count
+
+---
+
+## TFT v2 Prep — Task 1: DXY/VIX propagated to liquidity (2026-05-30)
+
+**Change:** `dxy` and `vix` were missing from `liquidity` because the Phase 5 DB migration
+selected only `log_volume, price_range, log_return, amihud` from `market_context`.
+Fixed by adding both columns to:
+
+1. `market_context` SELECT in the load cell
+2. `merge_asof` column projection in the assign cell
+3. `df_liquidity` column list in the write cell
+
+**Verification (2026-05-30):**
+
+```sql
+SELECT COUNT(*),
+       SUM(CASE WHEN dxy IS NOT NULL THEN 1 ELSE 0 END) AS with_dxy,
+       SUM(CASE WHEN vix IS NOT NULL THEN 1 ELSE 0 END) AS with_vix
+FROM liquidity;
+```
+
+- total: 22,795 | with_dxy: 22,794 | with_vix: 22,788 ✅
+- Gap of 1 / 7 rows matches the ~0.1% off-hours coverage holes in market_context.
+
+**Next:** Task 3 — EV/off-topic cleanup heuristic (`usable_strict` column).
+
+---
+
+## TFT v2 Prep — Task 2: Entity normalization (2026-06-01)
+
+### Approach
+
+Materialized the full raw entity distribution from `llm_features.entities` into `raw_entity_counts` (5,807 distinct strings, 44,774 total mentions). Triaged in three passes with a 25-occurrence minimum threshold for new canonicals:
+
+- **≥100 occurrences (61 strings):** 53 already mapped; 7 noise/geo/news-agency strings dropped (Reuters, Europe†, AAA Oregon/Idaho, Washington, Asia†, Oregon, NYMEX). Goldman Sachs kept in variant map but excluded from canonical list.
+- **50–99 occurrences (34 strings):** 15 already mapped; 4 variant fixes (Opec+, President Donald Trump, West Texas Intermediate (WTI), Tehran → Iran); 6 new canonicals (UK, BP, Algeria, Germany, Australia, Persian Gulf); Philippines and Malaysia dropped.
+- **25–49 occurrences (71 strings):** 2 bug fixes (EU and API strings not mapped despite being canonicals); 12 variant fixes (Houthi, Aramco, Beijing → China, Moscow → Russia, Brent Crude, Opec, Abu Dhabi → UAE, Fatih Birol → IEA, IRGC → Iran, Eurozone → EU, Xi Jinping → China, Narendra Modi → India); 9 new canonicals (ExxonMobil, Rosneft, Lukoil, TotalEnergies, Türkiye, Permian Basin, Hungary, Egypt, Gulf of Mexico).
+- **Case/punctuation sweep:** Added Opec, Opec+, OPEC Plus, Brent Crude, United States of America, Russian Federation.
+
+† Europe and Asia reinstated as canonicals (geographic aggregates parallel to Middle East).
+
+**Biden:** Combined count 92 (above 80 threshold) → added as separate canonical.
+
+**DOE:** "Department of Energy" contaminated by Philippines DoE; clean prefixed variants below threshold → dropped. Rationale in `thesis_decisions_log.md`.
+
+### Final state
+
+- `03_src/nlp/llm_features.py`: **208 variant mappings** → **71 canonical entities** (up from 52)
+- `wti_thesis.db`: `raw_entity_counts` materialized (5,807 rows); `article_entities` written (29,473 rows, 10,293 distinct articles, 71 distinct entities used)
+- Coverage: 169 / 5,807 distinct raw strings mapped (2.9%); 30,135 / 44,774 mention-level coverage (67.3%)
+- Notebook: `02_notebooks/12_entity_normalization.ipynb`
+
+**Next:** Task 3 — EV/off-topic cleanup heuristic (`usable_strict` column).
+
+## TFT v2 Prep - Task 3: `usable_strict` on inconsistent llm articles (2026-06-01)
+
+### Approach
+
+- Add an INT column called `usable_strict` with default NULL values.
+- Filter the articles that has zero on the 3 channels but no technical event type, and a score on sentiment_score (242 counted articles).
+- Flag them with 0 on the `usable_strict`, flag the rest with 1.
+
+### Final state
+
+- The db table llm_features got updated with the column successfuly.
+- The 242 articles were flagged and are live on the db.
+
+**This task is completed**, the 242 articles with zero on the 3 channels but no technical event type got flagged as `usable_strict = 0`
+
+**Next:** Task 4 - Lock train/val/test indices.

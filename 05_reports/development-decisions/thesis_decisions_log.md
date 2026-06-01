@@ -125,6 +125,10 @@ This section captures the in-progress decisions for the second LLM extraction pa
   - Post-hoc normalization is easy to iterate on without re-running extractions.
 - **Thesis writeup:** Feature engineering section. Mention the normalization step and report the canonical entity list used in the final binary flags.
 
+### Entity exclusion: ambiguous and below-threshold candidates
+
+Some candidate entities were excluded because their raw extractions contained ambiguous references (for example, "Department of Energy" appeared in both U.S. and Philippines contexts), and the clean variants did not reach the 25-article threshold required to support a stable feature column.
+
 ### Entity encoding: top-N binary flags
 
 - **Decision:** Encode entities as binary flags for the top 15 entities (by frequency) plus a `has_other_entity` catchall, rather than as a single categorical embedding.
@@ -164,6 +168,13 @@ This section captures the in-progress decisions for the second LLM extraction pa
   - Compute inter-rater agreement (Cohen's κ) between the regex filter and the LLM filter.
   - Audit a sample of cases where the LLM says `usable=false` but the article appears legitimate to a human — characterize the LLM's failure modes.
 - **Thesis writeup:** This is a methodological contribution in its own right. Frame it as: _"Two filtering regimes were compared — a regex/keyword heuristic and an LLM-based usability judgment. The disagreement rate was X%, with the LLM recovering Y articles incorrectly rejected by the heuristic and rejecting Z articles incorrectly accepted by the heuristic. Inter-rater agreement was κ=K, indicating substantial but imperfect overlap. Manual audit of LLM rejections suggests its failure modes are primarily [characterize]."_ This is publishable material — comparison of filtering approaches for noisy financial news corpora is genuinely useful to the literature.
+
+### `usable_strict` as an additional channel inconsistent flag
+
+- **Decision:** Add `usable_strict` to the llm_features entries that have zero on the 3 decomposition channels but have no `technical` event type.
+- **Reasoning:** A diagnostic query over the production extraction batch identified 242 articles where the LLM marked usable=true and tagged the article with a channel-relevant event type (supply, demand, or geopolitical) but assigned all three channel scores to exactly zero. These represent a residual punting behavior in which the LLM committed to a categorical event type but did not commit to a magnitude on the corresponding channel. The articles were flagged with a secondary usable_strict=false indicator, enabling ablation studies in TFT v2 (Section 4.3.7) to test whether their inclusion affects channel-based feature learning.
+- **Implementation:** All the llm_feature articles got a new column `usable_strict` with initial NULL values, then after filtering the 242 articles with zero on the 3 channels, but no `technical`event type, were assigned `usable_strict = 0` and the others that have at least 1 channel != 0, `usable_strict = 1`.
+  The 242 articles represent approximately 2% of the usable corpus; their exclusion does not substantially reduce the modeling-ready dataset size, but their inclusion or exclusion provides a clean diagnostic for the channel decomposition's robustness.
 
 ### Cost optimizations
 
