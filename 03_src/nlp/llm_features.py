@@ -1,3 +1,5 @@
+import json
+
 import anthropic
 
 SYSTEM_PROMPT = """\
@@ -44,7 +46,7 @@ sanctions removal).
 Most articles score 0.1–0.4. Major OPEC cut = 0.9. Geopolitical crisis = 1.0.
 - event_type: 1–3 categories ordered by salience from: geopolitical, supply, \
 demand, macro, technical, other. EIA inventory articles classify as supply or \
-macro — do not use “inventory”.
+macro — do not use "inventory".
 - entities: specific named actors central to the article (not incidentally mentioned). \
 Include countries, organizations, oil companies, and key officials. Use the names \
 exactly as they appear in the article.
@@ -175,6 +177,263 @@ _OPTIONAL_FIELDS = [
 ]
 
 
+# ── Entity normalization ───────────────────────────────────────────────────────
+# Source: full raw_entity_counts distribution audit on llm_features.entities
+#         (Phase 2 corpus, usable=1). Triage thresholds:
+#           ≥100 occurrences : reviewed exhaustively
+#           50–99            : reviewed exhaustively; 25 occ. min for new canonicals
+#           25–49            : reviewed exhaustively; same threshold
+#           <25              : dropped unless unambiguous variant of existing canonical
+# 70 canonical entities retained after manual review.
+# Variants not listed here are silently dropped by canonicalize_entities().
+
+ENTITY_CANONICAL: dict[str, str] = {
+    # --- States and political entities ---
+    "United States": "US",
+    "US": "US",
+    "U.S.": "US",
+    "United States of America": "US",
+    "Iran": "Iran",
+    "Tehran": "Iran",
+    "Islamic Revolutionary Guard Corps": "Iran",
+    "Russia": "Russia",
+    "Russian Federation": "Russia",
+    "Moscow": "Russia",
+    "China": "China",
+    "Beijing": "China",
+    "Xi Jinping": "China",
+    "Israel": "Israel",
+    "Israel-Hamas": "Israel",
+    "Israel-Palestine": "Israel",
+    "Israeli-Palestinian conflict": "Israel",
+    "India": "India",
+    "Narendra Modi": "India",
+    "Saudi Arabia": "Saudi Arabia",
+    "Ukraine": "Ukraine",
+    "Venezuela": "Venezuela",
+    "Canada": "Canada",
+    "Iraq": "Iraq",
+    "Nigeria": "Nigeria",
+    "United Arab Emirates": "UAE",
+    "UAE": "UAE",
+    "Abu Dhabi": "UAE",
+    "Kazakhstan": "Kazakhstan",
+    "Qatar": "Qatar",
+    "Oman": "Oman",
+    "Japan": "Japan",
+    "Kuwait": "Kuwait",
+    "Pakistan": "Pakistan",
+    "Libya": "Libya",
+    "Mexico": "Mexico",
+    "Azerbaijan": "Azerbaijan",
+    "Yemen": "Yemen",
+    "Lebanon": "Lebanon",
+    "Brazil": "Brazil",
+    "South Korea": "South Korea",
+    "Guyana": "Guyana",
+    "United Kingdom": "UK",
+    "UK": "UK",
+    "Britain": "UK",
+    "Algeria": "Algeria",
+    "Germany": "Germany",
+    "Australia": "Australia",
+    "Hungary": "Hungary",
+    "Egypt": "Egypt",
+    "Türkiye": "Türkiye",
+    "Turkey": "Türkiye",
+    # --- Geographic regions / strategic locations ---
+    "Strait of Hormuz": "Strait of Hormuz",
+    "Middle East": "Middle East",
+    "West Asia": "Middle East",
+    "Gaza": "Gaza",
+    "Red Sea": "Red Sea",
+    "Persian Gulf": "Persian Gulf",
+    "Gulf of Mexico": "Gulf of Mexico",
+    "Permian Basin": "Permian Basin",
+    "Europe": "Europe",
+    "Asia": "Asia",
+    "Eurozone": "EU",
+    # --- Political/economic actors and individuals ---
+    "Donald Trump": "Trump",
+    "Trump": "Trump",
+    "President Trump": "Trump",
+    "President Donald Trump": "Trump",
+    "Trump administration": "Trump",
+    "Nicolas Maduro": "Maduro",
+    "Nicolás Maduro": "Maduro",
+    "Vladimir Putin": "Putin",
+    "Jerome Powell": "Powell",
+    "Scott Bessent": "Bessent",
+    "Joe Biden": "Biden",
+    "Biden": "Biden",
+    "Biden administration": "Biden",
+    "President Biden": "Biden",
+    "Fatih Birol": "IEA",
+    # --- Multilateral organizations and central banks ---
+    "OPEC+": "OPEC+",
+    "Opec+": "OPEC+",
+    "OPEC Plus": "OPEC+",
+    "OPEC": "OPEC",
+    "Opec": "OPEC",
+    "Organization of the Petroleum Exporting Countries": "OPEC",
+    "Federal Reserve": "Fed",
+    "Fed": "Fed",
+    "US Federal Reserve": "Fed",
+    "U.S. Federal Reserve": "Fed",
+    "European Union": "EU",
+    "EU": "EU",
+    "Energy Information Administration": "EIA",
+    "EIA": "EIA",
+    "U.S. Energy Information Administration": "EIA",
+    "US Energy Information Administration": "EIA",
+    "International Energy Agency": "IEA",
+    "IEA": "IEA",
+    "American Petroleum Institute": "API",
+    "API": "API",
+    # --- Non-state actors ---
+    "Hamas": "Hamas",
+    "Hezbollah": "Hezbollah",
+    "Houthis": "Houthis",
+    "Houthi": "Houthis",
+    # --- Companies ---
+    "Saudi Aramco": "Saudi Aramco",
+    "Aramco": "Saudi Aramco",
+    "Chevron": "Chevron",
+    "Shell": "Shell",
+    "BP": "BP",
+    "ExxonMobil": "ExxonMobil",
+    "Exxon Mobil": "ExxonMobil",
+    "Rosneft": "Rosneft",
+    "Lukoil": "Lukoil",
+    "TotalEnergies": "TotalEnergies",
+    # Goldman Sachs mapped for traceability but excluded from CANONICAL_ENTITIES
+    "Goldman Sachs": "Goldman Sachs",
+    # --- Commodities / benchmarks ---
+    "West Texas Intermediate": "WTI",
+    "U.S. West Texas Intermediate crude": "WTI",
+    "West Texas Intermediate (WTI)": "WTI",
+    "WTI": "WTI",
+    "Brent": "Brent",
+    "Brent crude": "Brent",
+    "Brent Crude": "Brent",
+    # --- Market indices ---
+    "S&P 500": "S&P 500",
+}
+
+CANONICAL_ENTITIES: list[str] = [
+    # Countries
+    "US",
+    "Iran",
+    "Russia",
+    "China",
+    "Israel",
+    "India",
+    "Saudi Arabia",
+    "Ukraine",
+    "Venezuela",
+    "Canada",
+    "Iraq",
+    "Nigeria",
+    "UAE",
+    "Kazakhstan",
+    "Qatar",
+    "Oman",
+    "Japan",
+    "Kuwait",
+    "Pakistan",
+    "Libya",
+    "Mexico",
+    "Azerbaijan",
+    "Yemen",
+    "Lebanon",
+    "Brazil",
+    "South Korea",
+    "Guyana",
+    "UK",
+    "Algeria",
+    "Germany",
+    "Australia",
+    "Hungary",
+    "Egypt",
+    "Türkiye",
+    # Geographic regions / strategic locations
+    "Strait of Hormuz",
+    "Middle East",
+    "Gaza",
+    "Red Sea",
+    "Persian Gulf",
+    "Gulf of Mexico",
+    "Permian Basin",
+    "Europe",
+    "Asia",
+    # Political actors and individuals
+    "Trump",
+    "Maduro",
+    "Putin",
+    "Powell",
+    "Bessent",
+    "Biden",
+    # Organizations
+    "OPEC+",
+    "OPEC",
+    "Fed",
+    "EU",
+    "EIA",
+    "IEA",
+    "API",
+    # Non-state actors
+    "Hamas",
+    "Hezbollah",
+    "Houthis",
+    # Companies
+    "Saudi Aramco",
+    "Chevron",
+    "Shell",
+    "BP",
+    "ExxonMobil",
+    "Rosneft",
+    "Lukoil",
+    "TotalEnergies",
+    # Commodities / benchmarks / indices
+    "WTI",
+    "Brent",
+    "S&P 500",
+]
+
+assert (
+    len(CANONICAL_ENTITIES) == 70
+), f"Expected 70 canonical entities, got {len(CANONICAL_ENTITIES)}"
+
+_CANONICAL_SET = set(CANONICAL_ENTITIES)
+
+
+def canonicalize_entities(entities_json: str | None) -> list[str]:
+    """Map raw LLM entity strings to canonical names.
+
+    Takes the JSON array stored in llm_features.entities and returns a
+    deduplicated list of canonical entity names present in CANONICAL_ENTITIES.
+    Entities not in ENTITY_CANONICAL, or whose canonical name is not in
+    CANONICAL_ENTITIES (e.g. Goldman Sachs), are silently dropped.
+    """
+    if not entities_json:
+        return []
+    try:
+        raw = json.loads(entities_json)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    seen: set[str] = set()
+    result: list[str] = []
+    for entity in raw:
+        canonical = ENTITY_CANONICAL.get(str(entity).strip())
+        if canonical and canonical in _CANONICAL_SET and canonical not in seen:
+            seen.add(canonical)
+            result.append(canonical)
+    return result
+
+
+# ── Extraction helpers ─────────────────────────────────────────────────────────
+
+
 def _user_text(title: str, body: str | None) -> str:
     title = str(title).encode("utf-8", errors="ignore").decode("utf-8").strip()
     body_text = ""
@@ -236,9 +495,7 @@ def parse_batch_result(result) -> dict | None:
 
 def extract_features(title: str, body: str | None, client: anthropic.Anthropic) -> dict:
     """Single-article synchronous extraction. Used for calibration runs."""
-    response = client.messages.create(
-        **build_batch_request(0, title, body)["params"]
-    )
+    response = client.messages.create(**build_batch_request(0, title, body)["params"])
 
     tool_input = None
     for block in response.content:
