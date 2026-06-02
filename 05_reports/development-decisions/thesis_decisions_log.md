@@ -186,6 +186,28 @@ Some candidate entities were excluded because their raw extractions contained am
 - **Estimated total cost:** ~$15-20 for the full batch over ~20k articles.
 - **Thesis writeup:** Brief footnote or appendix on reproducibility. State the model version (`claude-haiku-4-5`), temperature, the use of Batches API, and the cost. Reproducibility-relevant, not methodologically central.
 
+### Source verification discipline
+
+- **Decision:** Every numerical claim and methodological specific written into the thesis must trace to a specific notebook cell output, DB query result, source CSV, or canonical project file (logbook, decisions log). No claims from memory of conversation; no inference of "what the result should be."
+- **Reasoning:** Two errors were caught during the Chapter 4 audit that originated from drafting against condensed logbook entries rather than primary sources: (1) §4.2.3 contemporaneous OLS was initially described as a null result when the actual notebook output showed statistically significant coefficients with bearish > bullish asymmetry already present at k=0; (2) §4.2.5 VAR method paragraphs invented a Cholesky ordering, bootstrap details, and a lag-7 specification when the actual code uses `orth=False` (no Cholesky), default asymptotic ±2 std-error bands (no bootstrap), and lag 24 (all four information criteria selected the maximum candidate lag).
+- **Implementation:** When in doubt, run a verification query against the working DB or paste the relevant notebook cell rather than asserting. The cost of an extra check is much smaller than the cost of an unverified claim ending up in the deliverable.
+
+### Entity normalization — decisions worth tracing
+
+The full 71-canonical-entity set in `llm_features.py` reflects a curated triage. Decisions that may not be self-evident from the dictionary itself:
+
+- **OPEC and OPEC+ kept separate** rather than merged. OPEC+ is the body driving modern production decisions and OPEC alone covers a narrower set; the TFT can learn the differential weight if signal exists. Defensible as preserving the analytical distinction despite some journalistic interchangeability.
+- **WTI kept as canonical** despite initial concern about tautology with the target asset. The flag carries signal because not every WTI-corpus article explicitly names the benchmark; an article tagged WTI is specifically benchmark-mention-focused, distinct from articles using generic "oil prices" language. Combined with the Brent flag, the four-way (neither/WTI/Brent/both) pattern is informative.
+- **Europe and Asia kept as canonical** as geographic aggregates, parallel to the Middle East canonical. The argument for dropping (too broad given country-level entities exist) was reconsidered against the consistency argument with Middle East.
+- **Xi Jinping → China, Narendra Modi → India** rather than separate canonicals. Trump remains the exception because of his exceptional frequency (1,935) and the documented frequency of his direct market-moving policy interventions; Xi and Modi at ~45 each don't carry the same per-leader signal density.
+- **Joe Biden as separate canonical** at 92 articles. Asymmetric with Xi/Modi but defensible: Biden's count is well above the 25-threshold and his policy actions (SPR releases, Iran/Venezuela sanctions framing) are distinct enough from generic US coverage to merit their own column.
+- **Hassan Nasrallah → Hezbollah** (not Iran). Nasrallah led Hezbollah, which is a separate canonical from the Iranian state.
+- **Amin Nasser → Saudi Aramco** (not Saudi Arabia). The Aramco CEO maps to the company, which is separate from the state canonical.
+- **DOE dropped entirely.** The bare "Department of Energy" string is contaminated by Philippines DOE references (~20% of mentions). Clean prefixed variants ("U.S. Department of Energy", "US Department of Energy") only total 14 articles, below the 25-threshold. SPR-related signal is adequately captured by the US, Trump, and channel features for typical coverage.
+- **ECB added as canonical** at 38 mentions. Parallel to the Fed canonical for the Eurozone monetary-policy signal, which the EU canonical does not capture (EU is broader, not specifically about monetary policy).
+- **Israel-Palestine, Israel-Hamas, Israeli-Palestinian conflict → Israel.** Conflict descriptors mapped to the oil-market-relevant participant. Israel's military actions affect regional risk; Palestine is not an oil-market actor; Hamas and Gaza are separate canonicals capturing the specific Palestinian dimension.
+- **Goldman Sachs kept in ENTITY_CANONICAL as a self-mapping but excluded from CANONICAL_ENTITIES.** Analyst commentary signal appears in both bullish and bearish coverage, muddling its predictive value. Preserves the mapping decision for traceability without producing a feature column.
+
 ---
 
 ## Open methodological questions (to revisit before final writeup)
@@ -194,6 +216,11 @@ Some candidate entities were excluded because their raw extractions contained am
 - **Daily memory effect at −27/−28h in TFT attention.** Genuinely interesting but needs an interpretation. Is it traders revisiting positions at the same time the next day, overnight cycle effects, or an artifact of the encoder window interacting with `is_us_session`? Worth a paragraph in the discussion but worth thinking through _why_ first.
 - **Robustness check for the alignment rule (ceiling vs floor vs round).** A 30-minute experiment that would strengthen the methods chapter. Re-run lag OLS with floor alignment; report whether the lag-peak shifts.
 - **Pre-war vs post-war TFT comparison.** The first TFT was trained on pre-war (Feb 2026) data. The retraining will include the post-war expansion. The pre-war model's clean results were the original publishable finding; the post-war model is an extension. Both should be reported, with discussion of how (or whether) the geopolitical shock affected the model.
+- **Cost overrun on full LLM extraction batch.** Pre-batch estimate (scaled from the 107-article cell) implied ~$8 for the full corpus; actual aggregate across three batch submissions was $38.82 (~5x). Causes: prompt-cache strategy did not fire across separate batch submissions, body truncation increased from 800 to 1,500 characters between estimate and final batch, and per-usable-article output token count was higher than assumed due to channel decomposition adding output fields. Not methodologically central — flag for the reproducibility appendix if a reader queries the cost figure.
+
+- **TFT v1 training accelerator was Google Colab T4 GPU, not the Apple Silicon MPS used for the local pipeline.** Chapter 3 §3.6.5 reflects this correction. The MPS was used for FinBERT extraction and pipeline orchestration only.
+
+- **Source-verification discipline.** Two Chapter 4 errors were caught during a late audit (§4.2.3 wrong-sign claim and §4.2.5 fabricated VAR method specifics). The fix is a strict rule: every numerical or methodological specific traces to a primary source (notebook cell output, DB query, source CSV) and is never inferred from condensed entries. New drafting sessions should adopt this principle.
 
 ### News Calibration V1 vs V2 for TFT V2
 

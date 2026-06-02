@@ -248,7 +248,7 @@
 - Replaced VAR with Temporal Fusion Transformer (TFT) via pytorch-forecasting 1.7.0
 - Training done on Google Colab T4 GPU
 - Model: hidden_size=32, attention_head_size=4, dropout=0.1, 112k parameters
-- Early stopping triggered at epoch 21, best val_loss=0.204
+- val_loss = 0.204 (best at epoch 21, early stopped)
 - Checkpoint saved locally at `01_data/models/tft_wti.ckpt`
 
 ### Input features
@@ -495,11 +495,14 @@ We are keeping the current TFT model with pre-war news, current val loss = 0.209
 
 ### Actual cost
 
-- Input tokens: 270,880
-- Output tokens: 20,888
-- Cache reads: 0 (hit rate: 0.0%)
-- Cache writes: 0
-- **Actual total: $0.1501**
+- Final batch (107 articles): $0.1501
+- Two earlier batches (interrupted by credit limits): credit-funded
+- **Aggregate cost across three batch submissions: $38.82**
+- Higher than pre-batch estimate (~$7.81 scaled from 107-article cell) due to:
+  - Prompt-cache strategy did not fire across separate batch submissions (each batch re-paid system-prompt write cost)
+  - Body truncation raised to 1,500 chars (from 800 in initial estimate), nearly doubling input tokens per article
+  - Per-usable-article output tokens higher than the 200-token assumption because channel decomposition adds output fields
+- Cost remained operationally negligible. Cost mitigation strategies (Batches API 50% discount, short-circuit on usable=false, prompt caching design) remain documented in `thesis_decisions_log.md`.
 
 ### Next steps
 
@@ -702,14 +705,14 @@ FROM liquidity;
 
 Materialized the full raw entity distribution from `llm_features.entities` into `raw_entity_counts` (5,807 distinct strings, 44,774 total mentions). Triaged in three passes with a 25-occurrence minimum threshold for new canonicals:
 
-- **≥100 occurrences (61 strings):** 53 already mapped; 7 noise/geo/news-agency strings dropped (Reuters, Europe†, AAA Oregon/Idaho, Washington, Asia†, Oregon, NYMEX). Goldman Sachs kept in variant map but excluded from canonical list.
-- **50–99 occurrences (34 strings):** 15 already mapped; 4 variant fixes (Opec+, President Donald Trump, West Texas Intermediate (WTI), Tehran → Iran); 6 new canonicals (UK, BP, Algeria, Germany, Australia, Persian Gulf); Philippines and Malaysia dropped.
-- **25–49 occurrences (71 strings):** 2 bug fixes (EU and API strings not mapped despite being canonicals); 12 variant fixes (Houthi, Aramco, Beijing → China, Moscow → Russia, Brent Crude, Opec, Abu Dhabi → UAE, Fatih Birol → IEA, IRGC → Iran, Eurozone → EU, Xi Jinping → China, Narendra Modi → India); 9 new canonicals (ExxonMobil, Rosneft, Lukoil, TotalEnergies, Türkiye, Permian Basin, Hungary, Egypt, Gulf of Mexico).
+- **≥100 occurrences (61 strings):** 53 already mapped; 7 noise/geo/news-agency strings dropped (Reuters, Europe†, AAA Oregon/Idaho, Washington, Asia†, Oregon, NYMEX). Goldman Sachs kept in variant map but excluded from canonical list (analyst-commentary signal muddled across bull/bear coverage).
+- **50–99 occurrences (34 strings):** 15 already mapped; 4 variant fixes (Opec+, President Donald Trump, West Texas Intermediate (WTI), Tehran → Iran); 6 new canonicals (UK, BP, Algeria, Germany, Australia, Persian Gulf); Philippines and Malaysia dropped (demand signal already captured by Asia/China/Japan).
+- **25–49 occurrences (71 strings):** 2 bug fixes (EU and API strings not mapped despite being canonicals); 12 variant fixes (Houthi, Aramco, Beijing → China, Moscow → Russia, Brent Crude, Opec, Abu Dhabi → UAE, Fatih Birol → IEA, IRGC → Iran, Eurozone → EU, Xi Jinping → China, Narendra Modi → India); 9 new canonicals (ExxonMobil, Rosneft, Lukoil, TotalEnergies, Türkiye, Permian Basin, Hungary, Egypt, Gulf of Mexico); ConocoPhillips and Indonesia dropped.
 - **Case/punctuation sweep:** Added Opec, Opec+, OPEC Plus, Brent Crude, United States of America, Russian Federation.
 
 † Europe and Asia reinstated as canonicals (geographic aggregates parallel to Middle East).
 
-**Biden:** Combined count 92 (above 80 threshold) → added as separate canonical.
+**Biden:** Combined count 92 (above 80 threshold) → added as separate canonical. Asymmetric treatment relative to Xi Jinping and Modi (both mapped to their countries) is defensible: Trump's exceptional frequency (1,935) creates the precedent for a standalone US-president canonical, and Biden's count is high enough to warrant the same treatment for post-administration coverage continuity.
 
 **DOE:** "Department of Energy" contaminated by Philippines DoE; clean prefixed variants below threshold → dropped. Rationale in `thesis_decisions_log.md`.
 
@@ -722,19 +725,29 @@ Materialized the full raw entity distribution from `llm_features.entities` into 
 
 **Next:** Task 3 — EV/off-topic cleanup heuristic (`usable_strict` column).
 
-## TFT v2 Prep - Task 3: `usable_strict` on inconsistent llm articles (2026-06-01)
+## TFT v2 Prep — Task 3 supporting analysis: zero-channel breakdown (2026-06-01)
 
-### Approach
+### Diagnostic counts (all from `llm_features WHERE usable=1`)
 
-- Add an INT column called `usable_strict` with default NULL values.
-- Filter the articles that has zero on the 3 channels but no technical event type, and a score on sentiment_score (242 counted articles).
-- Flag them with 0 on the `usable_strict`, flag the rest with 1.
+Total zero-channel articles (all 3 channels = 0, sentiment_score != 0): **1,161**
+
+Breakdown by event_type pattern:
+
+| Subset                                                                                       | Count | Treatment                  |
+| -------------------------------------------------------------------------------------------- | ----: | -------------------------- |
+| Inconsistent: channel-relevant event_type (supply/demand/geopolitical) but channels all zero |   242 | `usable_strict = 0`        |
+| By-design: technical-only event_type, zero channels appropriate                              |   243 | `usable_strict = 1` (kept) |
+| Macro/other/structural: intermediate event_types, no specific channel implication            |   676 | `usable_strict = 1` (kept) |
+
+Rationale: only the 242 "inconsistent" cases represent residual LLM punting (the calibration weakness from §4.3.6). The 919 zero-channel articles in the other two categories are substantive on-topic content where the channels are correctly zero by article type (pure price reports, technical analysis, equity-market reactions to oil moves, macro framing without specific supply/demand implication).
+
+Original EV/off-topic contamination hypothesis was not confirmed by this dump — the manual audit found no EV stories or scraping artifacts in the top 50 zero-channel articles.
 
 ### Final state
 
-- The db table llm_features got updated with the column successfuly.
-- The 242 articles were flagged and are live on the db.
+- 11,675 articles with `usable=1`:
+  - 11,433 with `usable_strict=1`
+  - 242 with `usable_strict=0`
+- 7,944 articles with `usable=0` (unchanged; `usable_strict` also 0)
 
-**This task is completed**, the 242 articles with zero on the 3 channels but no technical event type got flagged as `usable_strict = 0`
-
-**Next:** Task 4 - Lock train/val/test indices.
+**Next:** Task 4 — Lock train/val/test indices.
