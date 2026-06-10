@@ -791,51 +791,108 @@ Test set spans the regime change: first ~430 hours pre-war, remaining ~1,200 hou
 
 Parameter counts confirm architectural constancy across the v1 → v2.0 → v2.1 transition: identical hidden_size, attention_head_size, dropout, and hidden_continuous_size. The v1-vs-v2.0 difference (~5%) is attributable entirely to the three new channel features entering the Variable Selection Network. The v2.2 expansion reflects the entity-flag features and the multi-target/multi-horizon output configuration.
 
-## TFT v2.0 — first ablation run results (2026-06-02)
+## TFT v2.0 — final result (2026-06-03)
 
 ### Training
 
-- Best checkpoint: `tft_v2.0-epoch=19-val_loss=0.2941.ckpt`
-- Best val_loss: 0.2941 at epoch 19
-- Early-stopped at epoch 25 (max_epochs=50, patience=5)
+- Best checkpoint: `tft_v2.0-epoch=24-val_loss=0.3106.ckpt`
+- Best val_loss: 0.3106 at epoch 24, early-stopped at epoch 26
+- Trainable parameters: 117,935
 - Compute: Colab T4 GPU
-- Trainable parameters: 118,114
-- Architecture: identical to TFT v1 (hidden_size=32, attention_head_size=4, dropout=0.1, hidden_continuous_size=16)
+- Config note: target_normalizer=GroupNormalizer(groups=['asset']) matches v1; static_categoricals=['asset'] removed (was degenerate single-category input)
 
-### Test set metrics (held-out, 1,637 hours, Jan 29 – May 13, 2026)
+### Test set metrics
 
-| Slice                            |     N |   MAE |  RMSE |
-| -------------------------------- | ----: | ----: | ----: |
-| Val                              | 1,637 | 0.466 | 1.035 |
-| Test full                        | 1,637 | 0.397 | 0.696 |
-| Test pre-war (before 2026-02-28) |   461 | 0.372 | 0.621 |
-| Test war (from 2026-02-28)       | 1,176 | 0.406 | 0.723 |
+| Slice        |     N |   MAE |  RMSE | Persistence MAE | % reduction |
+| ------------ | ----: | ----: | ----: | --------------: | ----------: |
+| Val          | 1,637 | 0.494 | 1.051 |           1.171 |         58% |
+| Test full    | 1,637 | 0.472 | 0.912 |           1.071 |         56% |
+| Test pre-war |   461 | 0.408 | 0.657 |           1.072 |         62% |
+| Test war     | 1,176 | 0.497 | 0.994 |           1.071 |         54% |
 
-### Persistence baseline (predict log_volume(t+1) = log_volume(t))
+### Feature importance (top 10)
 
-| Slice        | Persistence MAE | TFT v2.0 MAE | Reduction |
-| ------------ | --------------: | -----------: | --------: |
-| Val          |           1.171 |        0.466 |       60% |
-| Test full    |           1.071 |        0.397 |       63% |
-| Test pre-war |           1.072 |        0.372 |       65% |
-| Test war     |           1.071 |        0.406 |       62% |
+| Rank | Feature         | Importance |
+| ---: | --------------- | ---------: |
+|    1 | log_volume      |      0.257 |
+|    2 | amihud          |      0.168 |
+|    3 | log_return      |      0.115 |
+|    4 | sentiment_score |      0.108 |
+|    5 | supply_impact   |      0.046 |
+|    6 | is_wednesday    |      0.043 |
+|    7 | demand_impact   |      0.029 |
+|    8 | hour            |      0.024 |
+|    9 | event_type_int  |      0.024 |
+|   10 | certainty       |      0.021 |
 
-### Observations
+Importance distribution is balanced across market-context (log_volume, amihud, log_return) and news features. Sentiment_score at 11% rather than 64% in the previous (degenerate) run; channels (supply, demand) at 5% and 3% respectively. Risk_premium falls below the top 10.
 
-- TFT v2.0 substantially beats persistence on every slice. 60-65% MAE reduction confirms the model is learning real signal from input features, not just memorizing autocorrelation.
-- War-slice MAE is ~9% worse than pre-war-slice MAE (0.406 vs 0.372), but only ~5% worse than full test MAE. The model generalizes reasonably across the regime change.
-- Val MAE (0.466) is worse than test MAE (0.397) despite identical sample size. Attributed to val period (Oct 2025 – Jan 2026) having higher persistence baseline MAE (1.171 vs test's 1.071), i.e., genuinely higher volume variability that's harder to predict.
-- Direct comparison of v2.0's val_loss (0.294) to TFT v1's val_loss (0.204) is not apples-to-apples because v1's val set covers a different period (Phase 1 corpus, 80/20 split). The persistence-baseline comparison is the more meaningful sanity check on v2.0's behavior.
+### Attention
 
-### Pending for v2.0 (Cells 14-17)
+- Non-degenerate pattern: per-sample attention varies across samples
+- Population mean peaks at lag -48h (weight 0.143), with secondary at -47h (0.075) and -46h (0.034)
+- The -48h peak is interpretable as an encoder-boundary artifact rather than economically meaningful lag structure
+- No content-based difference between bearish/bullish/neutral attention patterns
 
-- Feature importance ranking (does sentiment_score still dominate or do channels carry weight?)
-- Attention weight peak lag (does v1's -4h peak reproduce?)
-- Directional asymmetry: bearish vs bullish predicted volume t-test
-- Save artifacts to `04_outputs/tft_v2/v2.0/`
+### Verdict on Success Criteria
+
+- **Criterion 1 (channels economically interpretable)**: PARTIAL. Channels appear in importance ranking but not dominantly. Attention is non-degenerate but doesn't clearly identify economically meaningful lags (e.g., -4h or -6h from lag OLS).
+- **Criterion 2 (directional asymmetry p<0.05)**: NOT YET EVALUATED (need bearish vs bullish predicted volume t-test on this run's predictions).
+- **Criterion 3 (multi-horizon error structure)**: NOT APPLICABLE (v2.0 is single-horizon).
 
 ### Next
 
-- Complete v2.0 evaluation (Cells 14-17)
-- Run v2.1 ablation (proper categoricals)
-- Run v2.2 ablation (entities + multi-horizon + multi-target)
+- Run v2.1 (proper categoricals) with same config (GroupNormalizer)
+- Run v2.2 (multi-horizon + multi-target + entity flags) — multi-horizon is the appropriate test for Criterion 3 and may also force the attention layer to use history meaningfully
+
+## TFT v2.1 — proper categoricals (2026-06-03)
+
+### Training
+
+- Best checkpoint: `tft_v2.1-epoch=32-val_loss=0.2736.ckpt`
+- Best val_loss: 0.2736 at epoch 32, early-stopped at epoch 38
+- Trainable parameters: 114,027 (3,908 fewer than v2.0 due to removing two int-encoded reals and replacing with small embedding tables)
+- Compute: Colab T4 GPU
+- Config: same as v2.0 (GroupNormalizer, no static_categoricals) plus event_type_primary and time_horizon moved from int-encoded reals to time_varying_unknown_categoricals
+
+### Test set metrics
+
+| Slice        |     N |   MAE |  RMSE | vs v2.0 MAE |
+| ------------ | ----: | ----: | ----: | ----------: |
+| Val          | 1,637 | 0.429 | 0.989 |        -13% |
+| Test full    | 1,637 | 0.375 | 0.709 |        -20% |
+| Test pre-war |   461 | 0.357 | 0.605 |        -12% |
+| Test war     | 1,176 | 0.382 | 0.746 |        -23% |
+
+Persistence baseline unchanged from v2.0 (val 1.171, test 1.071). v2.1 achieves 65% MAE reduction over persistence on test (vs v2.0's 56%).
+
+### Feature importance (top 10)
+
+| Rank | Feature       | Importance |
+| ---: | ------------- | ---------: |
+|    1 | demand_impact |      0.433 |
+|    2 | log_return    |      0.056 |
+|    3 | dxy           |      0.052 |
+|    4 | certainty     |      0.050 |
+|    5 | amihud        |      0.048 |
+|    6 | vix           |      0.043 |
+|    7 | hour          |      0.039 |
+|    8 | magnitude     |      0.038 |
+|    9 | day_of_week   |      0.038 |
+|   10 | n_articles    |      0.034 |
+
+Major shift from v2.0: `demand_impact` now dominates (43%) instead of `log_volume` (26% in v2.0). The new categoricals (event_type_primary, time_horizon) don't appear directly in the top 10 but their proper encoding rebalanced the feature distribution toward news channels.
+
+### Attention
+
+- Overall peak: lag -15h (away from v2.0's -48h edge artifact)
+- Per-sample variation present
+- Interpretable as a half-day-memory effect (15 hours ≈ 0.6 trading days), distinct from but related to v1's -27/-28h daily-memory finding
+
+### Verdict on Criterion 1
+
+Stronger partial pass than v2.0. Channels are now demonstrably driving prediction (demand_impact 43% importance) and attention shows real lag structure rather than boundary artifact.
+
+### Next
+
+Run v2.2 with full feature set (multi-horizon + multi-target + entity flags).
