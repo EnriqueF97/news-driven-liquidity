@@ -20,7 +20,7 @@ This thesis investigates how news-driven information affects liquidity dynamics 
 ## Repository Structure
 
 ```text
-project_wti/
+news-driven-liquidity/
 ├── 01_data/                        # Data directory
 │   ├── raw/
 │   │   ├── price/                  # Raw OHLCV data from yfinance (CL=F)
