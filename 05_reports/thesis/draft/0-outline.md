@@ -147,11 +147,10 @@ Structural reference for the thesis. The work investigates how news propagates i
   - Addition of DXY and VIX as macro covariates
   - Coverage extension to post-war period (through May 2026)
   - Initial corpus: same articles as Phase 1, processed through Haiku v1 for the first TFT
-- 4.3.2 LLM feature extraction with Claude Haiku
-  - Tool-use API with strict JSON schema (no parsing brittleness)
+- 4.3.2 LLM feature extraction
+  - Tool-use API with strict JSON schema
   - Initial schema (Haiku v1): sentiment_score, magnitude, event_type, entities, certainty, price_direction, time_horizon
   - Prompt design and iteration
-  - Cost and operational details (Batches API, prompt caching)
 - 4.3.3 LLM usable flag and filter comparison
   - Replacing the regex heuristic with an LLM judgment of content usability
   - Comparison: body_valid (13,550 accepted) vs usable (11,675 accepted), Cohen's κ
@@ -246,3 +245,35 @@ Structural reference for the thesis. The work investigates how news propagates i
 - C. TFT v2 training hyperparameters
 - D. Sample of LLM-rejected articles (illustrating the body_valid vs usable disagreement)
 - E. Complete OLS regression tables (all lags, with full p-values and confidence intervals)
+
+## Appendices
+
+Central registry of appendices with their scope and current status.
+
+| ID  | Title                            | Scope                                                                                                                                                                             | Status      | Referenced in    |
+| --- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------- |
+| A   | Canonical entity list            | Complete list of 71 canonical entities with their alias mappings (from `03_src/nlp/llm_features.py`)                                                                              | Not started | §4.3.2           |
+| B   | LLM extraction schema (Haiku v2) | Full schema of the Haiku v2 extraction including channel decomposition fields, entity extraction, magnitude, certainty, event_type, time_horizon                                  | Not started | §4.3.4, §4.3.6   |
+| C   | TFT v2 ablation study            | Three-row table comparing v2.0, v2.1, v2.2 configurations with val_loss, test MAE at 1h, feature importance top-3, and attention peak                                             | Not started | §4.3.7, §4.3.7.3 |
+| D   | Extended metrics tables          | Full 60-row metrics table (3 targets × 5 horizons × 4 slices) with MAE and RMSE for TFT v2                                                                                        | Not started | §4.3.7.2         |
+| E   | Reproducibility statement        | Library versions (torch, pytorch-forecasting, lightning), hardware (Colab T4 GPU), seed (42), deterministic algorithm settings, non-determinism note (upsample_linear1d_backward) | Not started | §4.3.7.1         |
+
+## Figures
+
+Central registry of figures with their location and content.
+
+| ID  | Title                                                                                                  | Type                     | Chapter/Section | Status                                    |
+| --- | ------------------------------------------------------------------------------------------------------ | ------------------------ | --------------- | ----------------------------------------- |
+| 1   | Placeholder for first figure in Chapter 1 (Introduction)                                               | TBD                      | §1.X            | Not planned                               |
+| 2   | Placeholder for first figure in Chapter 2 (Background)                                                 | TBD                      | §2.X            | Not planned                               |
+| 3.1 | Data pipeline overview (Phase 1 vs Phase 2 flow)                                                       | Diagram                  | §3.X            | Not started                               |
+| 3.2 | Corpus size comparison (Phase 1 vs Phase 2, articles per month)                                        | Bar chart                | §3.X            | Not started                               |
+| 4.1 | Headline bias comparison (title-only vs title+body sentiment)                                          | Grouped bar chart        | §4.2.2          | Complete (`headline_bias_comparison.png`) |
+| 4.2 | Lag OLS coefficients                                                                                   | Line plot                | §4.2.4          | Complete (`lag_coefficients.png`)         |
+| 4.3 | VAR impulse response function (sentiment → volume)                                                     | Line plot with CI        | §4.2.5          | Complete (`irf_sentiment_to_volume.png`)  |
+| 4.4 | TFT v2 attention pattern (mean encoder attention across 48 lags, disaggregated by sentiment direction) | Line plot                | §4.3.7.4        | Not started                               |
+| 4.5 | TFT v2 feature importance (top 10 features from Variable Selection Network)                            | Horizontal bar chart     | §4.3.7.3        | Not started                               |
+| 4.6 | Per-horizon prediction error curve (MAE and persistence reduction across horizons for log_volume)      | Line plot with dual axis | §4.3.7.4        | Not started                               |
+| 4.7 | Directional asymmetry (bearish vs bullish predicted log_volume by horizon and slice)                   | Grouped bar chart        | §4.3.7.5        | Not started                               |
+| 5.1 | Placeholder for discussion synthesis figure                                                            | TBD                      | §5.X            | Not planned                               |
+| 6.1 | Placeholder for future work overview                                                                   | TBD                      | §6.X            | Not planned                               |

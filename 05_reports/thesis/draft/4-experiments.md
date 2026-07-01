@@ -125,7 +125,7 @@ Three patterns are immediately visible:
 
 **Synthesis.** The lag OLS regressions deliver clean evidence for both research questions. RQ1's lag-structure question is answered with a structured pattern of coefficients peaking at +6h. RQ2's asymmetry question is answered with the consistent ordering of bearish-larger-than-bullish coefficients at every significant lag. Both findings will be revisited in Phase 2: the TFT v2 attention patterns (Section 4.3.7) provide an independent test of the lag-structure finding from a deep-learning angle, and the channel-decomposed features of Section 3.3.4 provide a richer substrate for understanding what makes the bearish response stronger than the bullish one.
 
-### 4.2.5 Vector Autoregression
+### 4.2.5 Vector Autoregression (VAR)
 
 **Motivation.** The lag OLS regressions of Section 4.2.4 measure how news sentiment at hour `t` predicts trading volume at subsequent hours, treating each article as an independent observation and each lag as a separate regression. The specification is well-suited to testing the lag-structure and asymmetry questions but does not exploit the joint dynamics of the sentiment and liquidity series themselves. A natural follow-up question is whether the bidirectional dependence between the two carries information that the lag OLS specification cannot capture. The vector autoregression (VAR) purpose was to investigate this question.
 
@@ -191,7 +191,7 @@ Phase 2 responds to the limitations of Phase 1 documented in Section 4.2.6 with 
 
 The phase unfolds as a sequence of interdependent steps rather than a single redesign. The Haiku schema is first deployed in a v1 form to support the initial TFT training (TFT v1). Inter-model calibration on this schema reveals a weakness in the composite sentiment score that motivates a schema revision (Haiku v2) introducing three orthogonal economic channel scores and the `usable` flag. The full LLM extraction batch then runs on the expanded corpus with this revised schema, supporting the final TFT v2 training. This subsection structure follows that chronology: the data setup is described first (§4.3.1), then the Haiku extraction (§4.3.2), then the filter migration (§4.3.3), the first calibration result (§4.3.4), TFT v1 (§4.3.5), the schema response (§4.3.6), the full batch and TFT v2 (§4.3.7), and a Phase 1 vs Phase 2 comparison (§4.3.8).
 
-## 4.3.1 Phase 2 data and feature setup
+### 4.3.1 Phase 2 data and feature setup
 
 The Phase 2 dataset extends the Phase 1 corpus in two directions. First, the GDELT scrape was extended through May 2026 to incorporate news from the post-war period that the Phase 1 window had missed. Second, the query set was expanded with five new queries targeting geopolitical and demand-side themes that became prominent during the war period. The full Phase 2 query set is reproduced in Section 3.1.
 
@@ -220,13 +220,13 @@ Table 4.3 summarises the Phase 2 dataset and contrasts it with the Phase 1 datas
 
 The Phase 2 dataset is the substrate for all subsequent subsections of this chapter.
 
-## 4.3.2 LLM feature extraction
+### 4.3.2 LLM feature extraction
 
 The migration from FinBERT to Claude Haiku is the central methodological change of Phase 2. Phase 1 used FinBERT's three-class categorical output as the sole news feature, mapped to a discrete `{-1, 0, +1}` score (Section 3.3.1). The mapping is information-poor on multiple dimensions: it collapses event magnitude, conflates event type with sentiment direction, and discards entity information entirely. The Phase 1 results showed that even this coarse representation carried detectable signal (Section 4.2.4), but the headline bias finding (Section 4.2.2) and the VAR sparsity diagnosis (Section 4.2.5) both pointed to the same conclusion: a richer per-article representation would enable a model to do more with the same underlying news corpus.
 
 The LLM extraction methodology is described in detail in Sections 3.3.2 through 3.3.5. This subsection documents how the methodology was deployed in Phase 2, what the production batch produced, and the engineering choices that made the batch tractable.
 
-**Extraction setup.** The extraction uses Anthropic's Claude Haiku 4.5 model, accessed through the Messages API with the tool-use API forcing the `extract_article_features` schema described in Section 3.3.3. The system prompt and tool schema are reproduced in Appendix A. Each article is submitted as a single API call with the system prompt cached for batch reuse, the article title and body (truncated to 1,500 characters) supplied as the user message, and the tool choice forced. Output is parsed deterministically from the tool-call structure without intermediate JSON parsing.
+**Extraction setup.** The extraction uses Anthropic's Claude Haiku 4.5 model, accessed through the Messages API with the tool-use API forcing the `extract_article_features` schema described in Section 3.3.3. The system prompt and tool schema are reproduced in Appendix A. Each article is submitted as a single API call with the system prompt, the article title and body (truncated to 1,500 characters) supplied as the user message, and the tool choice forced. Output is parsed deterministically from the tool-call structure without intermediate JSON parsing.
 
 **Batch execution.** The tool-use schema design (Section 3.3.3) instructs the model to return only the `usable` flag when an article is unusable, short-circuiting the remaining fields and reducing output tokens for approximately 40% of the corpus to a fraction of the usable-article output cost. Across the three submissions, all 19,619 articles received a successful tool-call response with zero unrecoverable errors.
 
@@ -333,11 +333,11 @@ This diagnostic is the pivot point of the Phase 2 methodology. A sentiment score
 
 **Response.** The diagnostic motivated a schema revision rather than a prompt tweak. If the problem is that one number is being asked to encode two judgments, the solution is to decompose the judgment into its separable components. Section 4.3.6 documents the resulting channel decomposition — the introduction of `supply_impact`, `demand_impact`, and `risk_premium` as orthogonal economic channels — and the re-calibration that validates it. Before that, however, the first deep-learning model of the project, TFT v1, was trained on the v1 schema; its results and limitations are the subject of the next subsection.
 
-### 4.3.5 Temporal Fusion Transformer v1
+## Temporal Fusion Transformer v1
 
 The first Temporal Fusion Transformer (TFT v1) is the project's first deep-learning model and the first to exploit the richer Haiku-extracted feature set. It was trained on the Phase 1 corpus, processed through the Haiku v1 schema, with the macro covariates DXY and VIX added. This subsection reports its training outcome, its interpretation outputs, and the limitations that motivate the subsequent refinements of Phase 2.
 
-**Training setup.** The model follows the architecture described in Section 3.6: a 48-hour encoder window, a one-hour prediction horizon, `hidden_size=32`, `attention_head_size=4`, `dropout=0.1`, and a quantile loss, totalling approximately 113,000 trainable parameters. Training was performed on a Google Colab T4 GPU via the `pytorch-forecasting` library. The dataset comprised 10,797 hourly rows with an 80/20 temporal split (approximately 8,637 training hours and 2,160 validation hours). Early stopping on validation loss triggered at epoch 21, with a best validation loss of **0.204**.
+**Training setup.** The model follows the architecture described in Section 3.6: a 48-hour encoder window, a one-hour prediction horizon, `hidden_size=32`, `attention_head_size=4`, `dropout=0.1`, and a quantile loss, totalling approximately 113,000 trainable parameters. Training was performed on a Google Colab T4 GPU. The dataset comprised 10,797 hourly rows with an 80/20 temporal split (approximately 8,637 training hours and 2,160 validation hours). Early stopping on validation loss triggered at epoch 21, with a best validation loss of **0.204**.
 
 The input feature set combined three groups. The LLM features (from the Haiku v1 schema) were `sentiment_score`, `magnitude`, `event_type` (integer-encoded as `event_type_num`), `certainty`, `price_direction` (as `price_direction_num`), `time_horizon` (as `time_horizon_num`), and `n_articles`.
 
@@ -462,9 +462,9 @@ TFT v1 (Section 4.3.5) validated the deep-learning approach on the Phase 1 featu
 
 ### 4.3.7.1 Model design
 
-TFT v2 uses a Temporal Fusion Transformer with hidden_size=32, attention_head_size=4, dropout=0.15 (slightly higher than v1's 0.1 to manage the expanded feature set), and hidden_continuous_size=16. The configuration was selected based on validation performance during a controlled exploration of feature engineering choices and training hyperparameters; the full exploration record is documented in Appendix [X]. The model has 298,329 trainable parameters.
+TFT v2 uses a Temporal Fusion Transformer with `hidden_size=32`, `attention_head_size=4`, `dropout=0.15` (slightly higher than v1's 0.1 to manage the expanded feature set), and hidden_continuous_size=16. The configuration was selected based on validation performance during a controlled exploration of feature engineering choices and training hyperparameters; the full exploration record is documented in Appendix [X]. The model has 298,329 trainable parameters.
 
-The training data uses the strict LLM filter introduced in Section 4.3.3 (`usable_strict=1`), which removes 242 articles where the LLM classified the article as topical but produced zero-valued channel scores — a residual inconsistency between the LLM's binary inclusion judgment and its channel-decomposition output. Filtering on `usable_strict=1` ensures that all training samples contribute non-trivial channel content.
+The training data uses the strict LLM filter introduced in Section 4.3.3 (`usable_strict=1`), which removes 242 articles where the LLM classified the article as topical but produced zero-valued channel scores. This subset is a residual inconsistency between the LLM's binary inclusion judgment and its channel-decomposition output. Filtering on `usable_strict=1` ensures that all training samples contribute non-trivial channel content.
 
 The input features comprise four groups:
 
@@ -475,19 +475,33 @@ The input features comprise four groups:
 - **Market context:** `log_volume`, `price_range`, `log_return`, `amihud`, `dxy`, `vix`. Identical to v1's market feature set.
 - **Calendar covariates:** `hour`, `day_of_week`, `month`, `is_us_session`, `is_wednesday`. Identical to v1.
 
-Hour-level aggregation: continuous features (sentiment, channels, magnitude, certainty) are averaged across articles in the hour; binary entity flags use the maximum (any article in the hour mentioning the entity sets the flag to 1); categorical features take the value of the highest-magnitude article. Hours without news articles take the synthetic `no_news` category and zero-valued continuous features. Boundary nulls in market covariates (DXY and VIX gaps on holidays where the underlying index did not update; first-row return and Amihud measures) are forward-filled or zero-filled as documented in the data preparation logbook.
+Hour-level aggregation: continuous features (sentiment, channels, magnitude, certainty) are averaged across articles in the hour; binary entity flags use the maximum (any article in the hour mentioning the entity sets the flag to 1); categorical features take the value of the highest-magnitude article. Hours without news articles take the synthetic `no_news` category and zero-valued continuous features.
+
+Boundary nulls in market covariates are handled as follows: DXY and VIX have approximately 6 to 7 hours of missing values from holiday gaps (where the underlying index did not update on dates when WTI futures still traded), and these are forward-filled from the most recent observed value. The first-hour log_return and amihud values are undefined because they require a previous price to compute differences, and are set to 0.0. These patches collectively affect under 0.1% of training samples.
 
 The model predicts three targets jointly: `log_volume`, `amihud`, and `price_range` at five horizons: 1, 3, 6, 12, and 28 hours ahead. The multi-horizon design directly tests RQ1 via the shape of the per-horizon prediction error curve; the multi-target design lets the model learn liquidity, illiquidity, and volatility relationships from the same encoded history. The 28-hour horizon specifically anchors the daily memory effect identified in TFT v1's attention pattern.
 
-The temporal split is 70/15/15 on the 11,232 hourly observations spanning 13 May 2024 to 13 May 2026 UTC, with 48-hour buffer windows between train, validation, and test partitions to prevent encoder-window leakage across split boundaries. The training set covers 2024-05-13 to 2025-10-07 (~17 months, 7,788 samples after dropping the trailing 27 hours required for the maximum-horizon decoder); the validation set covers 2025-10-09 to 2026-01-27 (~3.7 months, 1,610 samples); the test set covers 2026-01-29 to 2026-05-13 (~3.5 months, 1,610 samples).
+The temporal split is 70/15/15 on the 11,232 hourly observations spanning 13 May 2024 to 13 May 2026 UTC, with 48-hour buffer windows between train, validation, and test partitions to prevent encoder-window leakage across split boundaries. It is divided as follows:
 
-The training set is entirely pre-war (through 7 October 2025); the validation set covers a transition period of rising geopolitical tension but no active conflict; the test set straddles the war onset. This is not a designed contrast but a consequence of the 70/15/15 temporal split applied to a dataset that happens to end ~2.5 months after war onset. We accept this regime asymmetry rather than reshape the split (which would either compromise the test set's temporal causality through random sampling, or shrink the test window below useful sample sizes). The resulting evaluation tests not only standard predictive accuracy but also the model's ability to extrapolate to a regime structurally different from training data which is a more demanding criterion than within-distribution forecasting. The pre-war and war test slices reported separately throughout §4.3.7 enable inspection of where the model generalizes and where it does not.
+- The training set covers `2024-05-13 to 2025-10-07` (~17 months, 7,788 samples after dropping the trailing 27 hours required for the maximum-horizon decoder).
 
-Training uses Adam with learning rate `1e-3` and on-plateau learning rate reduction (patience 3 epochs), `MultiLoss([QuantileLoss()] * 3)` for the three-target case, gradient clipping at 0.1, early stopping on validation loss with patience 10 epochs and minimum improvement of 1e-4. Target normalization uses `MultiNormalizer([GroupNormalizer(groups=['asset']) for _ in range(3)])`. The accelerator was a Google Colab T4 GPU. Reproducibility is set via `pytorch_lightning.seed_everything(42, workers=True)` and `torch.use_deterministic_algorithms(True, warn_only=True)`; the residual non-determinism from `upsample_linear1d_backward` is documented in the methods logbook. The best validation loss of 0.408 was reached at epoch 26.
+- The validation set covers `2025-10-09 to 2026-01-27` (~3.7 months, 1,610 samples).
+
+- The test set covers `2026-01-29 to 2026-05-13` (~3.5 months, 1,610 samples).
+
+The training set is entirely pre-war (_through 7 October 2025_); the validation set covers a transition period of rising geopolitical tension but no active conflict; the test set straddles the war onset.
+
+This is not a designed contrast but a consequence of the 70/15/15 temporal split applied to a dataset that happens to end ~2.5 months after war onset. We accept this regime asymmetry rather than reshape the split (which would either compromise the test set's temporal causality through random sampling, or shrink the test window below useful sample sizes).
+
+The resulting evaluation tests not only standard predictive accuracy but also the model's ability to extrapolate to a regime structurally different from training data which is a more demanding criterion than within-distribution forecasting.
+
+Training uses Adam with learning rate `1e-3` and on-plateau learning rate reduction (patience 3 epochs), `MultiLoss([QuantileLoss()] * 3)` for the three-target case, gradient clipping at 0.1, early stopping on validation loss with patience 10 epochs and minimum improvement of 1e-4. Target normalization uses `MultiNormalizer([GroupNormalizer(groups=['asset']) for _ in range(3)])`.
+
+> The best validation loss of 0.408 was reached at epoch 26.
 
 ### 4.3.7.2 Predictive performance
 
-We evaluate TFT v2 on the held-out test set across three targets (log_volume, amihud, price_range), five prediction horizons (1, 3, 6, 12, 28 hours), and four reporting slices (validation, full test, pre-war test, war test). All predictions use the median quantile (q50) of the model's quantile output. We compare against a persistence baseline that predicts the next horizon's target value as the current hour's value, a standard reference for financial time series forecasting.
+We evaluate TFT v2 on the held-out test set across three targets (`log_volume`, `amihud`, `price_range`), five prediction horizons (_1, 3, 6, 12, 28 hours_), and four reporting slices (_validation, full test, pre-war test, war test_). All predictions use the median quantile (q50) of the model's quantile output. We compare against a persistence baseline that predicts the next horizon's target value as the current hour's value, a standard reference for financial time series forecasting.
 
 #### log_volume
 
@@ -604,10 +618,155 @@ The -17h peak does not correspond directly to either the +6h lag OLS finding or 
 
 The secondary peak at -1h reflects the recency effect: the most recent hour of news is informative for the immediate prediction. The model balances between recent information (recent hour) and longer-term context (around -17h).
 
-We also disaggregate the attention by sentiment direction (bearish, bullish, neutral, defined by `|sentiment_score| > 0.1`). Bearish-sentiment hours show peak attention at -17h, while bullish-sentiment hours peak at -12h. The two patterns differ by 5 hours, which is a meaningful divergence and suggests the model does treat news of opposite direction differently in terms of which historical hours it consults. Neutral hours peak similarly to the overall mean.
+We also disaggregate the attention by sentiment direction (bearish, bullish, neutral, defined by `|sentiment_score| > 0.1`).
+
+> Bearish-sentiment hours show peak attention at -17h, while bullish-sentiment hours peak at -12h.
+
+The two patterns differ by 5 hours, which is a meaningful divergence and suggests the model does treat news of opposite direction differently in terms of which historical hours it consults. Neutral hours peak similarly to the overall mean.
 
 The attention pattern partially supports RQ1's lag structure interpretation: the model's strongest attention sits in the 12 to 17 hour range, broadly consistent with the +6 to +12 hour range identified by both the lag OLS and the per-horizon error analysis. The Phase 1 finding does not point to one specific lag; it points to a range, and the TFT v2 attention pattern resides inside that range.
 
 #### Synthesis on RQ1
 
 The TFT v2 evidence partially corroborates Phase 1's lag OLS finding. The per-horizon error reduction peaks at +12h (73%) with strong performance at +6h (67%), and the attention pattern centers at -17h with bearish/bullish divergence. Neither diagnostic perfectly reproduces the +6h peak from lag OLS, but both place the most informative lag in the +6 to +12 hour range, which is consistent. The lag structure of news impact is detectable through TFT v2 attention and error analysis, and broadly aligns with the Phase 1 finding, even where the exact peak horizon differs by a few hours.
+
+### 4.3.7.5 Directional asymmetry analysis: evidence for RQ2
+
+Research Question 2 asks whether bearish news events produce different liquidity responses than bullish news events of comparable magnitude. Phase 1's lag OLS analysis (§4.2.4) found a robust bearish > bullish asymmetry in the log_volume response, most pronounced at the +6 hour lag. We test whether the TFT v2 model's predictions preserve this asymmetry.
+
+#### Test design
+
+For each combination of prediction horizon and reporting slice, we split the samples into three groups based on the sentiment score at the prediction hour: bearish (`sentiment_score < -0.1`), bullish (`sentiment_score > +0.1`), and neutral (`|sentiment_score| ≤ 0.1`). We compute the mean predicted log_volume for the bearish and bullish subsets and test whether their means differ using Welch's t-test (unequal variance). The test statistic evaluates the null hypothesis that bearish and bullish predictions come from distributions with the same mean.
+
+The neutral subset is excluded from the primary test because it captures hours with little news activity and dominates the sample counts (approximately 1,050 of 1,610 validation hours are neutral). Including neutral hours dilutes the bearish-vs-bullish contrast the test is designed to detect.
+
+Twenty tests total are conducted: five horizons (1, 3, 6, 12, 28h) × four slices (val, test_full, test_prewar, test_war). Table 4.9 reports the full result set.
+
+#### Results
+
+| Horizon | Slice       | Bearish n | Bullish n | Bearish mean | Bullish mean | Difference |   p-value | Significant |
+| ------: | ----------- | --------: | --------: | -----------: | -----------: | ---------: | --------: | ----------- |
+|      1h | val         |       318 |       269 |        8.503 |        8.510 |     -0.006 |     0.948 | No          |
+|      1h | test_full   |       274 |       621 |        8.856 |        8.808 |     +0.048 |     0.459 | No          |
+|      1h | test_prewar |        82 |       137 |        8.578 |        8.733 |     -0.155 |     0.388 | No          |
+|      1h | test_war    |       192 |       484 |        8.974 |        8.830 |     +0.144 |     0.126 | No          |
+|      3h | val         |       318 |       269 |        8.110 |        8.283 |     -0.174 |     0.281 | No          |
+|      3h | test_full   |       274 |       621 |        8.659 |        8.464 |     +0.195 |     0.139 | No          |
+|      3h | test_prewar |        82 |       137 |        8.881 |        8.221 | **+0.660** | **0.013** | **Yes**     |
+|      3h | test_war    |       192 |       484 |        8.684 |        8.575 |     +0.109 |     0.490 | No          |
+|      6h | val         |       318 |       269 |        8.177 |        8.336 |     -0.159 |     0.306 | No          |
+|      6h | test_full   |       274 |       621 |        8.581 |        8.396 |     +0.185 |     0.172 | No          |
+|      6h | test_prewar |        82 |       137 |        8.352 |        8.181 |     +0.171 |     0.533 | No          |
+|      6h | test_war    |       192 |       484 |        8.678 |        8.457 |     +0.221 |     0.154 | No          |
+|     12h | val         |       318 |       269 |        8.373 |        8.342 |     +0.031 |     0.839 | No          |
+|     12h | test_full   |       274 |       621 |        8.451 |        8.728 |     -0.277 |     0.079 | No          |
+|     12h | test_prewar |        82 |       137 |        8.258 |        8.355 |     -0.096 |     0.775 | No          |
+|     12h | test_war    |       192 |       484 |        8.533 |        8.834 |     -0.301 |     0.105 | No          |
+|     28h | val         |       318 |       269 |        8.111 |        8.106 |     +0.005 |     0.992 | No          |
+|     28h | test_full   |       274 |       621 |        8.603 |        8.689 |     -0.086 |     0.587 | No          |
+|     28h | test_prewar |        82 |       137 |        8.253 |        8.023 |     +0.256 |     0.383 | No          |
+|     28h | test_war    |       192 |       484 |        8.636 |        8.808 |     -0.172 |     0.369 | No          |
+
+One test reaches statistical significance at the standard p < 0.05 threshold: horizon +3h on the pre-war test slice, with a bearish mean of 8.881 versus a bullish mean of 8.221 (difference +0.660, p = 0.013). At this horizon and slice, the model predicts substantially higher log_volume following bearish news than following bullish news, in the direction consistent with Phase 1's lag OLS finding.
+
+The remaining nineteen tests do not reach significance. The direction of the bearish-versus-bullish difference is inconsistent across slices and horizons: it is positive (bearish > bullish, matching lag OLS direction) in some, negative in others, with p-values distributed broadly.
+
+#### Interpretation
+
+The single significant result at +3h pre-war is meaningful for two reasons. First, its direction matches the lag OLS finding: bearish news predicts higher log_volume than bullish news at the same nominal horizon. Second, the effect size (+0.660 in log_volume units, roughly 93% relative volume increase) is substantial in magnitude, not just statistically detectable.
+
+However, the failure of the remaining nineteen tests to show consistent directional asymmetry constrains what we can claim. With twenty tests conducted, some caution against multiple comparisons is warranted, and we treat this single result as suggestive rather than confirmatory. The direction of the bearish-versus-bullish difference is inconsistent across other slices and horizons.
+
+We interpret this evidence as follows. TFT v2 and the Phase 1 lag OLS are answering structurally different questions about the same data. The lag OLS isolates the direct effect of sentiment direction at a specific historical lag on contemporaneous volume, holding other factors constant through the regression specification. The TFT integrates the full 48-hour encoder window of features (channels, entities, market context, macro covariates, calendar variables) through non-linear interactions in the Variable Selection Network, LSTM encoder, and attention layer. By the time the model produces a point prediction, sentiment direction has been mixed with many other signals, and the directional asymmetry that the OLS regression detects in isolation does not fully survive that integration.
+
+The +3h pre-war result is consistent with this interpretation: the asymmetry is detectable at short horizons in the regime the model trained on (pre-war), but fades at longer horizons and does not transfer clearly to the war regime. This is not a contradiction of the Phase 1 finding; it is a methodological refinement. The bearish-vs-bullish asymmetry identified by lag OLS is a real feature of the joint distribution of news sentiment and liquidity. The TFT's failure to reproduce it consistently reflects the different question the TFT answers rather than an absence of the underlying phenomenon.
+
+#### Synthesis on RQ2
+
+The evidence for directional asymmetry in TFT v2 predictions is limited. One of twenty tests reaches p < 0.05, at the +3h pre-war horizon with direction matching Phase 1's lag OLS finding. This result partially corroborates the asymmetry finding but does not establish it robustly across horizons or regimes. Phase 1's regression-based finding stands; Phase 2's forecasting-based test does not overturn it and provides weak positive evidence at a single horizon. The methodological difference between the two approaches accounts for the divergence in strength of evidence.
+
+### 4.3.7.6 Success criteria evaluation
+
+Three success criteria were established for TFT v2 in advance of training (§4.3.7.1):
+
+1. **Channels are economically interpretable** in attention and feature importance. Qualitative test that the channel decomposition (§4.3.6) produces a model in which the channels are visible drivers of prediction.
+2. **Directional asymmetry test reaches p < 0.05** for bearish versus bullish predicted log_volume. Quantitative test of RQ2, independent of Phase 1's lag OLS evidence.
+3. **Multi-horizon error structure matches the lag OLS peak**, with per-horizon prediction quality concentrated around the +6 hour lag identified by Phase 1's lag OLS analysis (§4.2.4). Quantitative test of RQ1.
+
+Evaluated against the results in §4.3.7.2 through §4.3.7.5:
+
+| Criterion                                             | Status       | Evidence                                                                                                                                                                                                                 |
+| ----------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Channels economically interpretable                | Pass         | VIX and demand_impact are the top two features (23.6% and 13.6% respectively); five entity flags in top ten; attention non-degenerate with sample-level variation and bearish/bullish divergence (peaks at -17h vs -12h) |
+| 2. Directional asymmetry p < 0.05                     | Partial pass | One of twenty tests significant at +3h pre-war (p = 0.013, bearish > bullish, direction matching lag OLS); other horizons and slices show no consistent directional pattern                                              |
+| 3. Multi-horizon error structure matches lag OLS peak | Partial pass | Strongest persistence reduction at +12h (73%) with +6h close behind (67%); both horizons in the range Phase 1 identified as relevant, but the exact peak (+12h) does not align with lag OLS peak (+6h)                   |
+
+The model passes Criterion 1 unambiguously and satisfies Criteria 2 and 3 partially. The partial results are informative rather than negative: they refine what the Phase 1 findings mean when evaluated through a different methodological lens.
+
+The configuration described in §4.3.7.1 through §4.3.7.5 is designated as TFT v2 for the remainder of this thesis. The directional asymmetry detected by the Phase 1 lag OLS analysis (§4.2.4) is not invalidated by the partial pass on Criterion 2; the difference between the two methods reflects the integrated nature of the TFT's prediction process, in which sentiment direction is one of many signals processed through the Variable Selection Network, LSTM encoder, and attention layer alongside channels, entity flags, market context, and macro covariates.
+
+The ablation across feature engineering choices (§4.3.7.3 and Appendix C) confirmed that the entity normalization, channel decomposition, and proper categorical encoding each contribute to the final model's predictive behavior. The v1 architectural footprint (`hidden_size=32`, `attention_head_size=4`, `dropout=0.15`, `hidden_continuous_size=16`) was selected based on validation performance during exploration; the full exploration record is available in the internal project training log.
+
+### 4.3.8 Methodological comparison: Phase 1 versus Phase 2
+
+The two phases of this thesis approach the same research questions through structurally different methodologies. Phase 1 (§4.2) analyzes the effect of news on WTI liquidity through regression-based methods (contemporaneous OLS, lag OLS, VAR) applied to FinBERT-derived sentiment features on a corpus filtered by regex-based rules. Phase 2 (§4.3) analyzes the same relationships through deep learning forecasting (TFT v2) applied to LLM-derived channel-decomposed features on a corpus filtered by LLM-based rules. Neither phase supersedes the other; the two methodologies answer complementary questions about the same underlying data.
+
+#### 4.3.8.1 What Phase 2 changed methodologically
+
+Phase 2 introduced changes at four levels of the analytical stack. Each change was motivated by a specific limitation of Phase 1 rather than a wholesale rejection of its approach.
+
+**Corpus expansion.** Phase 1 uses a 13,690-article corpus filtered by regex rules (`body_valid`), covering the pre-war period from March 2024 to February 2026. Phase 2 uses an 11,675-article LLM-filtered corpus (`usable=1`) extending through May 2026 to include the war onset (28 February 2026) and its immediate aftermath. The Phase 2 corpus is slightly smaller in article count (fewer articles pass the LLM's stricter inclusion judgment than the regex's broader match) but temporally more complete, including data from the regime change that Phase 1's dataset does not cover.
+
+**Feature extraction.** Phase 1 uses FinBERT to produce a three-class sentiment label per article (bearish, neutral, bullish), aggregated to hourly averages for OLS regression. This produces a scalar sentiment signal per hour. Phase 2 uses Claude Haiku with a structured schema to extract multiple dimensions per article: a composite sentiment score, three channel decompositions (`supply_impact`, `demand_impact`, `risk_premium`), a magnitude and certainty, an event type category, a time horizon, and a list of entities. Each dimension carries information that FinBERT's three-class label alone does not encode. In particular, the channel decomposition allows the model to distinguish news that affects supply expectations from news that affects demand expectations from news that affects risk premiums, whereas FinBERT collapses all three into a single sentiment axis.
+
+**Entity normalization.** Phase 1 does not include entity information as model features. Phase 2 introduces a canonical list of 71 entities (§4.3.2 and Appendix A) that maps entity mentions in articles to a consistent identifier set. Each hour receives a binary vector of length 71 indicating which entities were mentioned by the dominant article of that hour. This allows the TFT to condition its predictions on the identity of the actors involved (US, Iran, Saudi Arabia, OPEC+, etc.), a signal not available to any Phase 1 method.
+
+**Analytical framework.** Phase 1 estimates relationships between contemporaneous or lagged sentiment values and the current or future liquidity variable using regression coefficients. This isolates the effect of specific variables at specific lags but does not produce forecasts across multiple horizons simultaneously. Phase 2 uses a deep learning forecaster (TFT v2) that predicts three liquidity targets at five horizons jointly, using the full history of the previous 48 hours of features. This produces forecasts across horizons but does not isolate individual variable effects in the way OLS does.
+
+The move from Phase 1 to Phase 2 is not a shift from a weaker method to a stronger one; it is a shift from a method that isolates specific effects at specific lags to a method that integrates all features and predicts multiple horizons jointly. Each method has strengths and limitations that complement the other rather than substitute for it.
+
+### 4.3.8 Methodological comparison: Phase 1 versus Phase 2
+
+The two phases of this thesis approach the same research questions through structurally different methodologies. Phase 1 (§4.2) analyzes the effect of news on WTI liquidity through regression-based methods (contemporaneous OLS, lag OLS, VAR) applied to FinBERT-derived sentiment features on a corpus filtered by regex-based rules. Phase 2 (§4.3) analyzes the same relationships through deep learning forecasting (TFT v2) applied to LLM-derived channel-decomposed features on a corpus filtered by LLM-based rules. Neither phase supersedes the other; the two methodologies answer complementary questions about the same underlying data.
+
+#### 4.3.8.1 What Phase 2 changed methodologically
+
+Phase 2 introduced changes at four levels of the analytical stack. Each change was motivated by a specific limitation of Phase 1 rather than a wholesale rejection of its approach.
+
+**Corpus expansion.** Phase 1 uses a 13,690-article corpus filtered by regex rules (`body_valid`), covering the pre-war period from March 2024 to February 2026. Phase 2 uses an LLM-filtered corpus (`usable_strict=1`) of approximately 11,433 articles extending through May 2026 to include the war onset (28 February 2026) and its immediate aftermath. The `usable_strict` filter (introduced in §4.3.3) removes 242 articles where the LLM classified the article as topical but produced zero-valued channel scores, ensuring all training samples contribute non-trivial channel content. The Phase 2 corpus is smaller in article count (fewer articles pass the LLM's stricter inclusion judgment than the regex's broader match) but temporally more complete, including data from the regime change that Phase 1's dataset does not cover.
+
+**Feature extraction.** Phase 1 uses FinBERT to produce a three-class sentiment label per article (bearish, neutral, bullish), aggregated to hourly averages for OLS regression. This produces a scalar sentiment signal per hour. Phase 2 uses an LLM with a structured schema to extract multiple dimensions per article: a composite sentiment score, three channel decompositions (`supply_impact`, `demand_impact`, `risk_premium`), a magnitude and certainty, an event type category, a time horizon, and a list of entities. Each dimension carries information that FinBERT's three-class label alone does not encode. In particular, the channel decomposition allows the model to distinguish news that affects supply expectations from news that affects demand expectations from news that affects risk premiums, whereas FinBERT collapses all three into a single sentiment axis.
+
+**Entity normalization.** Phase 1 does not include entity information as model features. Phase 2 introduces a canonical list of 71 entities (§4.3.2 and Appendix A) that maps entity mentions in articles to a consistent identifier set. Each hour receives a binary vector of length 71 indicating which entities were mentioned by the dominant article of that hour. This allows the TFT to condition its predictions on the identity of the actors involved (US, Iran, Saudi Arabia, OPEC+, etc.), a signal not available to any Phase 1 method.
+
+**Analytical framework.** Phase 1 estimates relationships between contemporaneous or lagged sentiment values and the current or future liquidity variable using regression coefficients. This isolates the effect of specific variables at specific lags but does not produce forecasts across multiple horizons simultaneously. Phase 2 uses a deep learning forecaster (TFT v2) that predicts three liquidity targets at five horizons jointly, using the full history of the previous 48 hours of features. This produces forecasts across horizons but does not isolate individual variable effects in the way OLS does.
+
+The move from Phase 1 to Phase 2 is not a shift from a weaker method to a stronger one; it is a shift from a method that isolates specific effects at specific lags to a method that integrates all features and predicts multiple horizons jointly. Each method has strengths and limitations that complement the other rather than substitute for it.
+
+### 4.3.8.2 Persistence-relative performance across phases
+
+Direct numerical comparison of TFT v1 and TFT v2 loss values is not appropriate. The two models were trained with different loss functions (v1 uses `QuantileLoss` on a single target; v2 uses `MultiLoss` on three targets, producing values approximately three times the equivalent per-target scale), evaluated on validation sets covering different time periods (v1 covers 2160 hours of pre-war data from an 80/20 split; v2 covers 1610 hours of a transitional period from a 70/15/15 split), and predict at different horizons (v1 predicts one hour ahead; v2 predicts five horizons jointly). Any single numerical comparison between the two would be misleading.
+
+The most honest cross-phase comparison uses persistence-relative reduction on a shared target and horizon. Both models produce predictions for log_volume at the 1-hour horizon and can be evaluated against a persistence baseline in their respective validation sets. Even under this normalization, the underlying data is different, and the reduction percentages should be interpreted as "how much lift does each model provide over its baseline" rather than as "which model is more accurate."
+
+Under this comparison, both TFT v1 and TFT v2 substantially reduce prediction error over a persistence baseline. Neither model represents a failure. The differences between them lie not in raw predictive accuracy but in what they enable analytically: v1 produces single-horizon single-target predictions that concentrate feature importance on a scalar sentiment score; v2 produces multi-horizon multi-target predictions with feature importance distributed across decomposed channels, entity flags, and macro covariates. Phase 2's contribution is not measurably better predictions but a richer analytical vocabulary for interpreting the model's reasoning about news impact on liquidity.
+
+For readers interested in the specific numerical values, v1's validation performance is documented in §4.3.5 and v2's in §4.3.7.2. Both sets of numbers are on their respective scales and validation sets; interpreting either in isolation is straightforward, but reading them as competing claims is not.
+
+### 4.3.8.3 Limitations of cross-phase numerical comparison
+
+The differences between Phase 1 and Phase 2 gets a technically limited numerical comparison. This subsection makes the limitations explicit and explains why the thesis does not treat one phase as superseding the other.
+
+**Different validation sets.** Phase 1 evaluates TFT v1 on a validation set of approximately 2,160 hours drawn from an 80/20 temporal split of the pre-war corpus (through February 2026). Phase 2 evaluates TFT v2 on a validation set of 1,610 hours drawn from a 70/15/15 temporal split of the expanded corpus (through May 2026). The two validation sets cover different periods of the underlying time series, with different volatility regimes, different news event distributions, and different market conditions. A model's performance on one is not directly informative about its expected performance on the other.
+
+**Different loss functions.** TFT v1 uses `QuantileLoss` on a single target (`log_volume`), producing a scalar loss value on a familiar per-target scale. TFT v2 uses `MultiLoss([QuantileLoss()] * 3)` on three targets (`log_volume`, `amihud`, `price_range`), producing a scalar loss value that sums the per-target quantile losses. The v2 value is approximately three times the equivalent per-target scale, but the per-target contributions are not equal (the three targets have different value distributions, so their per-target quantile losses differ in absolute magnitude), and disaggregating the v2 loss into a per-target v1-comparable value is not straightforward.
+
+**Different prediction horizons.** TFT v1 predicts one hour ahead. TFT v2 predicts five horizons jointly (1, 3, 6, 12, 28h). The multi-horizon prediction task is intrinsically different from the single-horizon task, both in what the model must learn and in what the loss function measures.
+
+**Different feature counts.** TFT v1 uses approximately 12 features (composite sentiment score, magnitude, certainty, event type as integer, time horizon as integer, market context variables, calendar variables). TFT v2 uses over 90 features (composite sentiment, three channels, magnitude, certainty, categorical embeddings, 71 entity flags, market context, macro covariates, calendar variables). The larger feature set changes what the Variable Selection Network must decide between, and reallocates capacity across features in ways that make direct comparison of feature importance rankings between v1 and v2 misleading.
+
+**Different corpora underlying the aggregated features.** TFT v1 is trained on features derived from Phase 1's regex-filtered 13,690-article corpus, using FinBERT-derived sentiment. TFT v2 is trained on features derived from Phase 2's LLM-filtered corpus (approximately 11,433 articles under `usable_strict=1`), using LLM-derived channel decomposition and entity extraction. The features fed to the two models come from different upstream extraction processes; they are not the same features aggregated differently.
+
+Given these differences, comparing v1's val_loss of 0.204 to v2's val_loss of 0.408 (or any other direct numerical comparison) would be misleading. The values are on different scales, evaluated on different data, produced by different loss functions, applied to different feature sets. Reading the two numbers as competing performance claims is not supported by their construction.
+
+The methodological progression from Phase 1 to Phase 2 is real (§4.3.8.1): the LLM extraction produces richer features, the model architecture handles more complex feature interactions, the corpus is temporally more complete, and the analysis space is richer. But this progression is qualitative and analytical, not numerical. The thesis' primary contribution is the methodology of Phase 2, not the demonstration that Phase 2 is quantitatively better at forecasting than Phase 1 in a comparison test.

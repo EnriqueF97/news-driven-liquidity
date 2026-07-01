@@ -32,3 +32,17 @@ __pycache__/
 *.synctex.gz
 *.fls
 *.fdb_latexmk
+
+# Model checkpoints (too large for git)
+*.ckpt
+01_data/models/
+
+# Drive caches
+.Trash-*
+.DS_Store
+
+# Predictions (large pickles)
+**/predictions.pkl
+
+# Attention
+**/*.npz
