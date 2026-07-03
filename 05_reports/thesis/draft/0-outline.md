@@ -45,165 +45,253 @@ Structural reference for the thesis. The work investigates how news propagates i
   - 2.2.3 LLM-based feature extraction in finance
   - 2.2.4 Temporal Fusion Transformer applications in financial time series
 
-## Chapter 3 - Methods
+# Chapter 3 - Methods
 
-**Purpose:** Describe the techniques and methodology used in the project. Each phase in Chapter 4 invokes these techniques.
+## 3.1 Data sources and acquisition
 
-- 3.1 Data sources and acquisition
-  - Commodity selection (with the WTI vs sugar screening note)
-  - Market data via yfinance (CL=F, DXY, VIX)
-  - EIA Weekly Petroleum Status Reports (WCRSTUS1)
-  - GDELT headline scraping (eight Phase 1 queries, five Phase 2 additions)
-  - Body retrieval via BeautifulSoup
-  - Persistence to SQLite
-- 3.2 Temporal alignment
-  - 3.2.1 Ceiling assignment to the next trading hour
-  - 3.2.2 Forward-assignment of off-hours articles
-  - 3.2.3 Joined output
-- 3.3 News feature extraction approaches
-  - 3.3.1 FinBERT sentiment extraction (Phase 1)
-  - 3.3.2 Structured LLM extraction with Claude Haiku (Phase 2 covers both Haiku v1 and Haiku v2 schemas)
-  - 3.3.3 Tool-use API and schema enforcement
-  - 3.3.4 Channel decomposition (supply, demand, risk premium)
-  - 3.3.5 Magnitude, event type, entities, certainty, time horizon
-- 3.4 Filtering strategies
-  - 3.4.1 Regex/keyword heuristic (`body_valid`, Phase 1)
-  - 3.4.2 LLM-judged `usable` flag (Phase 2)
-  - 3.4.3 Comparative analysis
-- 3.5 Statistical models
-  - 3.5.1 Lag OLS specification
-  - 3.5.2 Vector autoregression specification
-- 3.6 Temporal Fusion Transformer
-  - 3.6.1 Architecture overview
-  - 3.6.2 Input typing
-  - 3.6.3 Forecast configuration
-  - 3.6.4 Architectural hyperparameters
-  - 3.6.5 Training procedure
-  - 3.6.6 Interpretation outputs
-- 3.7 Inter-model calibration methodology
-  - 3.7.1 The validation problem and our approach
-  - 3.7.2 Sample design
-  - 3.7.3 Extraction procedure
-  - 3.7.4 Agreement metrics
-  - 3.7.5 Use of the calibration outcome
+Describes what data was collected, from where, and why. Establishes the foundation for all downstream analysis.
 
-## Chapter 4 - Experiments
+### 3.1.1 Commodity selection
 
-**Purpose:** Document the work done, what was found, and how each finding motivated the next step. There exists so far 2 phases.
+Justifies the choice of WTI crude oil futures over other commodities. Discusses liquidity, geopolitical sensitivity, and news volume as selection criteria.
 
-### 4.1 Experimental setup
+### 3.1.2 Market data
 
-- Hardware
-- Software stack
-- Data partition strategy: temporal holdout (last 20% as validation)
-- Reproducibility: seeds, version-locked dependencies, deterministic prompts
+yfinance for WTI hourly OHLC data. Time range covered, aggregation to hourly grid, boundary null handling.
 
-### 4.2 Phase 1 - Initial pipeline and baseline modeling
+### 3.1.3 EIA inventory data
 
-**Phase scope:** WTI market data, GDELT scrape across the Phase 1 query set (eight queries, March 2024 to February 2026), FinBERT sentiment extraction, regex-based `body_valid` filter. The phase covers the headline bias experiment, the contemporaneous and lag OLS regressions, and the VAR specification. The phase establishes the empirical findings on RQ1 and RQ2 and exposes the limitations that motivate the Phase 2 NLP redesign and the move to deep-learning modeling.
+Weekly EIA inventory reports as fundamental context. Wednesday releases and their integration into the hourly time series.
 
-- 4.2.1 Phase 1 data and feature setup
-  - Coverage period, GDELT scrape (51,948 → 16,326 → 7,756 valid bodies + 5,934 title-only fallback = 13,690 modeling-ready)
-  - FinBERT extraction, sentiment label mapping
-  - EIA inventory features (is_eia_release, eia_surprise)
-  - body_valid regex filter (described in detail in §3.4.1)
-- 4.2.2 Headline bias experiment
-  - Methodology: FinBERT title-only vs title-plus-body on the 7,756 body_valid=1 articles
-  - Result: 41.6% sentiment disagreement, χ²=2050, p<0.001
-  - Asymmetry: titles overrepresent negative sentiment
-  - **Figure: headline_bias_comparison.png**
-  - Implication: full bodies preferred for downstream feature extraction
-- 4.2.3 Contemporaneous OLS
-  - Methodology: news sentiment at hour t regressed on log_volume at hour t
-  - Result: R² < 0.001, neither bearish nor bullish significant
-  - Interpretation: news does not move volume instantaneously at the moment of publication
-  - This null result motivates the lag analysis
-- 4.2.4 Lag OLS, first answer to RQ1 and RQ2
-  - Methodology: log_volume at t+k regressed on bearish/bullish indicators at t, for k ∈ {1, 2, 3, 4, 6, 8, 12}
-  - Result: peak impact at lag +6h (β ≈ 0.25, p < 0.001), consistent bearish > bullish asymmetry
-  - **Figure: lag_coefficients.png**
-  - Canonical evidence for RQ1 and RQ2
-- 4.2.5 Vector Autoregression
-  - Methodology: VAR on hourly time series of sentiment and liquidity
-  - Result: impulse response function suggests modest persistent effect but with wide error bands
-  - **Figure: irf_sentiment_to_volume.png**
-  - Abandonment rationale: ~50% zero-sentiment hours (signal sparsity), VAR estimator underidentified, IRF confidence intervals span zero at most horizons
-  - This motivates a model that handles sparse event-driven signal natively → TFT (Phase 2)
-- 4.2.6 Phase 1 summary
-  - Findings: lag +6h peak, bearish > bullish asymmetry, headline bias
-  - Limitations driving Phase 2:
-    - FinBERT cannot represent event type, entities, or causal direction
-    - Regex filter has documented false positives and false negatives
-    - VAR cannot identify dynamics on sparse sentiment signal
-    - Phase 1 dataset confined to pre-war coverage window
-    - Models lack macro covariates (DXY, VIX)
+### 3.1.4 News data
 
-### 4.3 Phase 2 - Refined pipeline and improved modeling
+GDELT for headline scraping. Article body scraping methodology (BeautifulSoup). Corpus sizes: 13,690 (Phase 1) → ~11,433 (Phase 2 with usable_strict).
 
-**Phase scope:** Migration from FinBERT to Claude Haiku for richer structured feature extraction, addition of DXY and VIX as macro covariates, and the introduction of the Temporal Fusion Transformer as the primary deep-learning model. The phase opens with the Haiku v1 schema and the first TFT training (TFT v1), then iterates: inter-model calibration exposes a weakness in the composite sentiment score, the schema is decomposed into orthogonal economic channels (Haiku v2), the news corpus is extended through May 2026, and TFT v2 is trained on the refined feature set. The phase ends with a direct comparison of TFT v1 and v2 and a robustness check on the filter migration.
+### 3.1.5 Persistence
 
-- 4.3.1 Phase 2 data and feature setup
-  - Migration rationale (FinBERT limitations from Phase 1)
-  - Addition of DXY and VIX as macro covariates
-  - Coverage extension to post-war period (through May 2026)
-  - Initial corpus: same articles as Phase 1, processed through Haiku v1 for the first TFT
-- 4.3.2 LLM feature extraction
-  - Tool-use API with strict JSON schema
-  - Initial schema (Haiku v1): sentiment_score, magnitude, event_type, entities, certainty, price_direction, time_horizon
-  - Prompt design and iteration
-- 4.3.3 LLM usable flag and filter comparison
-  - Replacing the regex heuristic with an LLM judgment of content usability
-  - Comparison: body_valid (13,550 accepted) vs usable (11,675 accepted), Cohen's κ
-  - False-positive cases (regex rejected, LLM accepted)
-  - False-negative cases (regex accepted, LLM rejected)
-  - Methodological contribution: LLM-based filtering for noisy news corpora
-- 4.3.4 Inter-model calibration of LLM features
-  - Methodology: 30-article stratified sample, scored by Haiku and by a GPT-family reference model with identical prompt
-  - First calibration result: sentiment_score correlation 0.39 between models, sign disagreement on 4/13 usable articles (31%)
-  - Diagnostic: disagreements concentrate on high-magnitude geopolitical events
-  - Root cause analysis: sentiment_score conflates event valence with directional price impact
-- 4.3.5 Temporal Fusion Transformer v1
-  - First TFT training, on the Phase 1 corpus with Haiku v1 features and macro covariates
-  - Architecture and training setup (Section 3.6)
-  - Results: val_loss 0.204, attention peak at −4h (consistent with lag OLS +6h), sentiment_score at 53% feature importance
-  - "Daily memory" effect at -27/-28h in attention
-  - Limitations:
-    - Directional asymmetry test underpowered (p=0.56)
-    - event_type, price_direction, time_horizon encoded as continuous integers (no real signal)
-    - No entity-level awareness
-    - Pre-war data only
-    - Inter-model calibration finding (§4.3.4) had not yet motivated the channel decomposition
-- 4.3.6 Channel decomposition response (Haiku v2 schema)
-  - Schema extension: supply_impact, demand_impact, risk_premium, each on [-1, +1]
-  - Each channel is a single factual judgment, designed to be orthogonal
-  - sentiment_score retained for continuity with the headline bias experiment and as a composite
-  - price_direction dropped (empirically redundant with sentiment_score)
-  - event_type changed from single string to array of 1–3 categories
-  - usable flag added for filtering (Phase 2 §3.4.2)
-  - Second calibration result:
-    - supply_impact: r=0.94, MAD 0.11
-    - demand_impact: r=0.96, MAD 0.05
-    - risk_premium: r=0.82, MAD 0.13
-    - sentiment_score (as side effect): r=0.39 → r=0.88
-    - Sign disagreements: 4/13 → 1/14
-  - Within-model orthogonality preserved (all pairwise |r| < 0.5)
-- 4.3.7 Full LLM extraction batch and TFT v2
-  - Execution: 19,619 articles via Batches API on the expanded corpus
-  - Outcome: 11,675 usable (59.5%), channel statistics
-  - TFT v2 architecture changes from v1:
-    - Proper categorical encodings (event_type, time_horizon)
-    - Multi-hot entity binary flags (top 15 entities)
-    - Three orthogonal channel features
-    - Trained on the expanded 22,795-aligned dataset
-  - Results: val_loss, attention patterns, feature importance per channel, still pending
-- 4.3.8 Phase 1 vs Phase 2 (v1 vs v2) comparison
-  - Table: val_loss, top-3 features by importance, asymmetry test p-value
-  - Discussion of which Phase 2 changes contributed most to which improvements, if any
+Describes the SQLite database structure. Table schemas for liquidity, llm_features, article_entities. Rationale for using SQLite for reproducibility.
 
-### 4.4 Robustness checks
+## 3.2 Temporal alignment
 
-- 4.4.1 Filter comparison (body_valid vs usable, with the κ analysis from 4.3.3)
-- 4.4.2 Optional: alignment robustness (lag analysis re-run with floor alignment instead of ceiling, to verify the lag +6h finding is not an artifact of the alignment rule)
+Explains how news articles (variable timing) are aligned with the hourly market grid. Central to the modeling approach.
+
+### 3.2.1 Ceiling assignment to the next trading hour
+
+Uses `dt.ceil` (not `dt.round`) to prevent leakage: an article published at 14:32 is assigned to hour 15:00, not hour 14:00. Preserves temporal causality.
+
+### 3.2.2 Forward-assignment of off-hours articles
+
+Articles published outside trading hours (weekends, holidays) are assigned to the next trading hour. Prevents these articles from being lost or leaked backwards.
+
+### 3.2.3 Joined output
+
+Describes the final joined output: hourly grid with market data + aggregated LLM features + calendar covariates. Documents the boundary null handling for DXY and VIX (holidays), and zero-fill for first-row log_return and amihud.
+
+## 3.3 News feature extraction approaches
+
+Compares two approaches to extracting features from news articles. Central methodological contribution of Phase 2.
+
+### 3.3.1 FinBERT sentiment extraction
+
+Phase 1 approach. Three-class sentiment labels (bearish/neutral/bullish) per article, aggregated hourly. Simplicity vs limitations of the categorical output.
+
+### 3.3.2 Structured LLM extraction with Claude Haiku
+
+Phase 2 approach. LLM-based extraction with structured schema. Richer signal per article than FinBERT.
+
+### 3.3.3 Tool-use API and schema enforcement
+
+Uses the Anthropic tool-use API to enforce structured output. Guarantees valid JSON, prevents hallucinated fields, enables schema validation.
+
+### 3.3.4 Channel decomposition
+
+Introduces the three-channel decomposition: supply_impact, demand_impact, risk_premium. Each on `[-1, +1]`. Motivation: FinBERT collapses multiple economic dimensions into one axis.
+
+### 3.3.5 Magnitude, event type, entities, certainty, and time horizon
+
+Additional fields extracted by Haiku v2. Magnitude and certainty for weight, event_type_primary and time_horizon as categoricals, entity list for entity normalization.
+
+## 3.4 Filtering strategies
+
+Two approaches to deciding which articles are usable for modeling.
+
+### 3.4.1 Regex/keyword heuristic (Phase 1)
+
+`body_valid` regex-based filter. Fast, deterministic, false negative-heavy.
+
+### 3.4.2 LLM-judged usable flag (Phase 2)
+
+`usable=1` flag produced by the LLM. Semantically-grounded judgment. Introduces `usable_strict=1` variant that additionally requires non-zero channel scores.
+
+### 3.4.3 Comparative analysis
+
+Cross-validation of regex vs LLM filter on a manual audit sample. Confusion matrices, agreement rates, false positive/negative analysis.
+
+## 3.5 Statistical models
+
+Phase 1's regression-based methods for RQ1 and RQ2 evidence.
+
+### 3.5.1 Lag OLS specification
+
+Distributed lag regression: `log_volume(t) = β_0 + Σ β_k * sentiment(t-k) + controls`. Motivation, specification, testing procedure.
+
+### 3.5.2 Vector autoregression specification
+
+Joint estimation of sentiment and log_volume dynamics. VAR order selection, impulse response function computation, stability testing.
+
+## 3.6 Temporal Fusion Transformer
+
+Central architecture for both TFT v1 and TFT v2. Describes the model at the level of design choices rather than per-variant specifics.
+
+### 3.6.1 Architecture overview
+
+High-level description of the TFT: Variable Selection Networks, LSTM encoder-decoder, attention mechanism, quantile prediction. Why chosen over alternatives.
+
+### 3.6.2 Input typing
+
+How features are typed in pytorch-forecasting: `time_varying_unknown_reals`, `time_varying_known_reals`, `time_varying_unknown_categoricals`. Consequences for the VSN processing.
+
+### 3.6.3 Forecast configuration
+
+Encoder length, prediction horizon, quantile levels. Rationale for 48-hour encoder window. Single-horizon (v1) vs multi-horizon (v2) prediction.
+
+### 3.6.4 Architectural hyperparameters
+
+hidden_size, attention_head_size, hidden_continuous_size, dropout. Rationale for the specific values chosen. Trade-offs against overfitting.
+
+### 3.6.5 Training procedure
+
+Adam optimizer, learning rate schedule, early stopping. Loss functions (QuantileLoss for v1, MultiLoss for v2). Split methodology, buffer windows to prevent leakage.
+
+### 3.6.6 Interpretation outputs
+
+What the trained TFT produces beyond predictions: attention weights, feature importance from VSN, quantile predictions. How each is used for analysis.
+
+## 3.7 Inter-model calibration methodology
+
+Methodology for cross-validating LLM outputs across model revisions. Applied in §4.3.4.
+
+### 3.7.1 The validation problem and our approach
+
+Why calibration is needed: different LLM revisions may produce different outputs on same articles. Approach: run the same articles through both versions and compare.
+
+### 3.7.2 Sample design
+
+How to select articles for the calibration. Random sampling, event type stratification, size of sample.
+
+### 3.7.3 Extraction procedure
+
+How to run both LLM versions on the calibration sample. Handling of temperature, seed, prompt versions.
+
+### 3.7.4 Agreement metrics
+
+Metrics used to measure agreement: correlation coefficients for continuous features,
+
+# Chapter 4 - Experiments
+
+## 4.1 Overview
+
+This chapter includes a series of experiments that involve Phase 1, changes that enable Phase 2 and the 2 versions of the TFT.
+
+### 4.2.1 Phase 1 data and feature setup
+
+Describes the Phase 1 corpus (13,690 articles, regex-filtered), the FinBERT sentiment extraction, hourly aggregation, and the market/macro/calendar features. Establishes the input data for all Phase 1 methods.
+
+### 4.2.2 Headline bias experiment
+
+Compares sentiment predicted from title-only vs title+body inputs, demonstrating that FinBERT sentiment is substantially different when body is included. Motivates the LLM-based approach in Phase 2.
+
+### 4.2.3 Contemporaneous OLS
+
+Regression of log_volume on hourly sentiment features. Establishes the baseline association between news and liquidity within the same hour.
+
+### 4.2.4 Lag OLS - RQ1 and RQ2
+
+Distributed lag regression across multiple lags. Identifies the +6h lag as the peak effect (RQ1) and establishes bearish > bullish directional asymmetry (RQ2). This is the primary Phase 1 evidence for both research questions.
+
+### 4.2.5 Vector Autoregression (VAR)
+
+Joint estimation of sentiment and log_volume dynamics. Reports impulse response functions to characterize how a sentiment shock propagates through the volume series.
+
+### 4.2.6 Phase 1 summary
+
+Consolidates the RQ1 and RQ2 findings from Phase 1 methods. Motivates the transition to Phase 2's richer feature extraction and deep-learning approach.
+
+### 4.3.1 Phase 2 data and feature setup
+
+Introduces the Phase 5 batch and the expanded corpus through May 2026. Documents the production LLM extraction pipeline, hourly aggregation for LLM features, and the temporal split adjustments for the new dataset.
+
+### 4.3.2 LLM feature extraction
+
+Describes the Haiku v2 schema, including channel decomposition (supply/demand/risk_premium), magnitude, certainty, event type, time horizon, and entity extraction. Documents the canonical entity normalization (71 entities, Appendix A).
+
+### 4.3.3 LLM `usable` flag and filter comparison
+
+Compares regex filter (Phase 1) against LLM filter (Phase 2). Reports agreement rate, false positive analysis, and manual audit. Introduces the `usable_strict=1` variant used for v2 training.
+
+### 4.3.4 Inter-model calibration of LLM features
+
+Cross-validates Haiku v1 vs Haiku v2 outputs. Reports the calibration process for consistency across LLM revisions.
+
+### 4.3.5 Temporal Fusion Transformer v1
+
+First deep-learning model using Phase 2 features. 113k parameters, single target (log_volume), 1h horizon, val_loss=0.204. Reports feature importance, attention pattern (peak -4h, secondary -27/-28h), and directional asymmetry analysis.
+
+### 4.3.6 Channel decomposition response
+
+Discusses how the v2 schema iteration was motivated by v1's findings. Explains why channels were introduced and how they affect subsequent modeling choices.
+
+### 4.3.7 Temporal Fusion Transformer v2
+
+Main Phase 2 model. Multi-horizon multi-target TFT with entity flags and channel decomposition. Trained on `usable_strict=1` corpus.
+
+#### 4.3.7.1 Success criteria
+
+Declares the three criteria TFT v2 was designed to satisfy, prior to presenting model design and results.
+
+- **Criterion 1**: channels and entities are visible drivers of prediction (qualitative).
+- **Criterion 2**: prediction accuracy substantially beats persistence baseline in the 1-12h window (quantitative).
+- **Criterion 3**: multi-horizon error curve consistent with Phase 1's lag OLS peak at +6h (quantitative). Pre-registration prevents post-hoc rationalization; evaluation is deferred to §4.3.7.7.
+
+#### 4.3.7.2 Model design
+
+Architecture (hidden_size=32, dropout=0.15), 298k parameters, feature set (channels, entity flags, categoricals, market, macro, calendar), aggregation rules, training procedure (patience=10, best val_loss 0.408 at epoch 26), 70/15/15 split with test set straddling war onset.
+
+#### 4.3.7.3 Predictive performance
+
+Three tables (log_volume, amihud, price_range) with MAE by horizon and slice. Persistence baseline comparison shows 41-73% reduction on log_volume, 52-54% on amihud, failure on price_range war slice. Justifies focus on log_volume for RQ1/RQ2 analysis.
+
+#### 4.3.7.4 Feature contributions
+
+Top 10 features by VSN importance. VIX at 23.6%, demand_impact at 13.6%, five entity flags in top 10. Includes ablation reference paragraph explaining that proper categorical encoding was needed to unlock channel-driven prediction (full ablation in Appendix C).
+
+#### 4.3.7.5 Lag structure analysis: evidence for RQ1
+
+Per-horizon prediction error curve peaks at +12h (73% reduction). Attention pattern peaks at -17h with bearish/bullish divergence (bearish -17h, bullish -12h). Partial corroboration of lag OLS peak at +6h through the +6h to +12h range.
+
+#### 4.3.7.6 Directional asymmetry analysis: evidence for RQ2
+
+Twenty t-tests (5 horizons × 4 slices) on bearish vs bullish predicted log_volume. One significant at +3h pre-war (p=0.013, +0.660 log_volume, matches lag OLS direction). Interpretation: TFT and lag OLS answer different questions; the asymmetry is real in the data but does not fully survive TFT's integrated prediction.
+
+#### 4.3.7.7 Success criteria evaluation
+
+Scorecard: Criterion 1 (channels interpretable) PASS, Criterion 2 (asymmetry) PARTIAL PASS, Criterion 3 (multi-horizon peak) PARTIAL PASS. Designates v2 configuration as canonical for the thesis.
+
+### 4.3.8 Methodological comparison: Phase 1 versus Phase 2
+
+Comparative analysis of the two phases as complementary methodologies rather than competing approaches.
+
+#### 4.3.8.1 What Phase 2 changed methodologically
+
+Four levels of change: corpus expansion (Phase 1 pre-war regex-filtered vs Phase 2 LLM-filtered with war coverage), feature extraction (FinBERT sentiment scalar vs Haiku channels + entities + categoricals), entity normalization (Phase 2 addition), analytical framework (regression vs multi-horizon forecasting).
+
+#### 4.3.8.2 Persistence-relative performance across phases
+
+Direct numerical comparison rejected (different val sets, loss functions, horizons). Both models substantially beat persistence in their respective val sets. Phase 2's contribution is analytical richness, not raw predictive accuracy.
+
+#### 4.3.8.3 Limitations of cross-phase numerical comparison
+
+Enumerates five specific incomparabilities: different validation sets, loss functions, prediction horizons, feature counts, underlying corpora. Concludes that Phase 2's contribution is methodological progression, not numerical improvement.
 
 ## Chapter 5 - Discussion
 
