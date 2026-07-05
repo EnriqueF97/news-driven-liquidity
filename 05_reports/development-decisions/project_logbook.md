@@ -970,6 +970,37 @@ The +3h pre-war bearish > bullish finding matches the direction of Phase 1's lag
 
 This configuration is designated as TFT v2 for the thesis writeup (§4.3.7). The ablation across v2.0, v2.1, v2.2 (without strict filter) and the patience/dropout exploration are documented in the v2 training runs tracking document (`05_reports/v2_training_runs.md`); the ablation table appears in Appendix [X].
 
+## Phase 1 FinBERT OLS re-run with continuous probabilities (2026-07-05)
+
+**Change**
+
+- OLS (contemporaneous + lag) re-specified to FinBERT class probabilities `P(negative)` + `P(positive)` (neutral reference); discrete dummies kept as reported baseline. VAR sentiment shock = signed score `P(pos) − P(neg)`.
+- Notebooks 07 and 08 executed on the regenerated venv (uv, torch 2.11). Fixed broken price load in nb08 (`Datetime` → `datetime_hour`).
+
+**Contemporaneous OLS (n=13,690)**
+
+- Continuous: P(neg) +0.186 (p<0.001), P(pos) +0.166 (p<0.001), R²=0.0015, F p=2.8e-05.
+- Discrete baseline: bearish +0.133 (p<0.001), bullish +0.103 (p=0.004), R²=0.0012.
+
+**Lag OLS (continuous, peak +6h)**
+
+- +6h: P(neg) 0.342 (p<0.001), P(pos) 0.291 (p<0.001), R²=0.0027, n=10,679.
+- Bearish>bullish at lags 1, 4, 6; exception lag 3 (bull 0.170 > bear 0.117, both weak). R²<0.003 throughout.
+- Table saved: `04_outputs/tables/finbert_lag_ols_continuous.csv`.
+
+**VAR (continuous signed score)**
+
+- ADF all stationary; lag order 24. Sentiment lags jointly non-significant in volume eq (L1 p=0.97, L2 0.59, L3 0.055). IRF spans zero. Remains abandoned; continuous encoding did not rescue it.
+
+**Headline bias continuous (notebook 07)**
+
+- Divergence magnitude `|signed_full − signed_title|`: label flips 0.96, same-label 0.17 (31.6% >0.2). Mean signed shift −0.09 → bodies more bearish; titles lean bullish.
+- Figure: `04_outputs/figures/headline_bias_divergence_magnitude.png`; summary CSV extended with 5 continuous fields.
+
+**Draft corrections (§4.2.2)**
+
+- Reversed headline-bias direction fixed (titles lean bullish, not "overstate negativity"); swapped neutral-title transition percentages fixed (39.6% neg / 30.5% neu / 30.0% pos).
+
 # TODO
 
 Maybe use dropout on training, different architecture, more data?
