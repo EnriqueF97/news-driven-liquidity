@@ -42,7 +42,7 @@ __pycache__/
 .DS_Store
 
 # Predictions (large pickles)
-**/predictions.pkl
+*.pkl
 
 # Attention
 **/*.npz
