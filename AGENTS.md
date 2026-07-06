@@ -16,7 +16,7 @@ Master's thesis in Artificial Intelligence at Radboud University, supervised by 
 - **RQ2**: Is there directional asymmetry in the response (bearish vs bullish news of comparable magnitude)?
 - **RQ3** (deferred to future work): cross-commodity spillovers.
 
-**Methodology in one paragraph**: two phases. Phase 1 uses FinBERT sentiment on regex-filtered articles (`body_valid=1`) with contemporaneous OLS, distributed-lag OLS, VAR/IRF, and a headline-bias experiment; it closes with TFT v1. Phase 2 replaces FinBERT with Claude Haiku v2 structured extraction (sentiment, magnitude, certainty, three channel scores: `supply_impact`, `demand_impact`, `risk_premium`, event type, time horizon, entities, `usable` flag) and closes with TFT v2, the canonical model reported in the thesis.
+**Methodology in one paragraph**: two phases. Phase 1 uses FinBERT sentiment on regex-filtered articles (`body_valid=1`) and closes with the classical statistical models: contemporaneous OLS, distributed-lag OLS, VAR/IRF, and a headline-bias experiment. Phase 2 replaces FinBERT with Claude Haiku v2 structured extraction (sentiment, magnitude, certainty, three channel scores: `supply_impact`, `demand_impact`, `risk_premium`, event type, time horizon, entities, `usable` flag) and does the deep-learning modeling: it begins with TFT v1 (trained on the Phase 1 corpus with the initial v1 schema) and, after an inter-model calibration finding motivates the channel decomposition, culminates in TFT v2, the canonical model reported in the thesis.
 
 ## Canonical sources of truth
 

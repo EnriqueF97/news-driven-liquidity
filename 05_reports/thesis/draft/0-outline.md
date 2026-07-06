@@ -133,11 +133,7 @@ Phase 1's regression-based methods for RQ1 and RQ2 evidence.
 
 ### 3.5.1 Lag OLS specification
 
-Distributed lag regression: `log_volume(t) = β_0 + Σ β_k * sentiment(t-k) + controls`. Motivation, specification, testing procedure.
-
-### 3.5.2 Vector autoregression specification
-
-Joint estimation of sentiment and log_volume dynamics. VAR order selection, impulse response function computation, stability testing.
+Distributed lag regression: `log_volume(t) = β_0 + Σ β_k * sentiment(t-k) + controls`. Motivation, specification, testing procedure. Brief note that an exploratory VAR was fitted and abandoned (sparse sentiment signal), kept as a one-paragraph mention in §4.2.5 with no standalone method section.
 
 ## 3.6 Temporal Fusion Transformer
 
@@ -209,13 +205,11 @@ Regression of log_volume on hourly sentiment features. Establishes the baseline 
 
 Distributed lag regression across multiple lags. Identifies the +6h lag as the peak effect (RQ1) and establishes bearish > bullish directional asymmetry (RQ2). This is the primary Phase 1 evidence for both research questions.
 
-### 4.2.5 Vector Autoregression (VAR)
-
-Joint estimation of sentiment and log_volume dynamics. Reports impulse response functions to characterize how a sentiment shock propagates through the volume series.
-
-### 4.2.6 Phase 1 summary
+### 4.2.5 Phase 1 summary
 
 Consolidates the RQ1 and RQ2 findings from Phase 1 methods. Motivates the transition to Phase 2's richer feature extraction and deep-learning approach.
+
+## 4.3 Phase 2 - Temporal Fusion Transformer
 
 ### 4.3.1 Phase 2 data and feature setup
 
@@ -356,12 +350,14 @@ Central registry of figures with their location and content.
 | 2   | Placeholder for first figure in Chapter 2 (Background)                                                 | TBD                      | §2.X            | Not planned                               |
 | 3.1 | Data pipeline overview (Phase 1 vs Phase 2 flow)                                                       | Diagram                  | §3.X            | Not started                               |
 | 3.2 | Corpus size comparison (Phase 1 vs Phase 2, articles per month)                                        | Bar chart                | §3.X            | Not started                               |
-| 4.1 | Headline bias comparison (title-only vs title+body sentiment)                                          | Grouped bar chart        | §4.2.2          | Complete (`headline_bias_comparison.png`) |
-| 4.2 | Lag OLS coefficients                                                                                   | Line plot                | §4.2.4          | Complete (`lag_coefficients.png`)         |
-| 4.3 | VAR impulse response function (sentiment → volume)                                                     | Line plot with CI        | §4.2.5          | Complete (`irf_sentiment_to_volume.png`)  |
-| 4.4 | TFT v2 attention pattern (mean encoder attention across 48 lags, disaggregated by sentiment direction) | Line plot                | §4.3.7.4        | Not started                               |
-| 4.5 | TFT v2 feature importance (top 10 features from Variable Selection Network)                            | Horizontal bar chart     | §4.3.7.3        | Not started                               |
-| 4.6 | Per-horizon prediction error curve (MAE and persistence reduction across horizons for log_volume)      | Line plot with dual axis | §4.3.7.4        | Not started                               |
-| 4.7 | Directional asymmetry (bearish vs bullish predicted log_volume by horizon and slice)                   | Grouped bar chart        | §4.3.7.5        | Not started                               |
+| 4.1  | Headline bias comparison (title-only vs title+body sentiment)                                          | Grouped bar chart        | §4.2.2          | Complete (`headline_bias_comparison.png`)            |
+| 4.2  | Headline bias divergence magnitude (continuous, abs(signed_full − signed_title))                       | Histogram                | §4.2.2          | Complete (`headline_bias_divergence_magnitude.png`)  |
+| 4.3  | Lag OLS coefficients                                                                                   | Line plot                | §4.2.4          | Complete (`lag_coefficients.png`)                    |
+| 4.4  | TFT v1 feature importance (news vs market features)                                                    | Horizontal bar chart     | §4.3.5          | Complete (`tft_feature_importance.png`)              |
+| 4.5  | TFT v1 encoder attention by lag                                                                        | Line plot                | §4.3.5          | Complete (`tft_attention_weights.png`)               |
+| 4.6  | TFT v2 attention pattern (mean encoder attention across 48 lags, disaggregated by sentiment direction) | Line plot                | §4.3.7.4        | Complete (`attention_by_sentiment_tftv2.2-exp2.png`) |
+| 4.7  | TFT v2 feature importance (top 10 features from Variable Selection Network)                            | Horizontal bar chart     | §4.3.7.3        | Not started                                          |
+| 4.8  | Per-horizon prediction error curve (MAE and persistence reduction across horizons for log_volume)      | Line plot with dual axis | §4.3.7.4        | Not started                                          |
+| 4.9  | Directional asymmetry (bearish vs bullish predicted log_volume by horizon and slice)                   | Grouped bar chart        | §4.3.7.5        | Not started                                          |
 | 5.1 | Placeholder for discussion synthesis figure                                                            | TBD                      | §5.X            | Not planned                               |
 | 6.1 | Placeholder for future work overview                                                                   | TBD                      | §6.X            | Not planned                               |

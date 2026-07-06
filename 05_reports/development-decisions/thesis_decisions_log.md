@@ -236,6 +236,13 @@ Initial extraction used a single composite sentiment_score field. Cross-model ca
 - **Two draft errors corrected in §4.2.2.** (1) Direction was stated backwards: the draft claimed titles overstate negativity, but title→body shift is −0.09 (bodies more bearish), so titles lean more bullish than the bodies they head. (2) Neutral-title transition breakdown had the negative and neutral percentages swapped (correct: 39.6% negative, 30.5% neutral, 30.0% positive).
 - **Write-up.** Chapters 3 (§3.3.1, §3.5.1, §3.5.2) and 4 (§4.2.2, §4.2.3, §4.2.4, §4.2.5) updated. All numbers trace to executed notebooks 07 and 08; lag table saved to `04_outputs/tables/finbert_lag_ols_continuous.csv`.
 
+### VAR removed from the thesis writeup (2026-07-05)
+
+- **Decision.** Drop the detailed VAR treatment. Deleted the VAR methods subsection (§3.5.2) and the detailed §4.2.5 VAR results; kept only a brief one-paragraph honest mention in §4.2.5 (exploratory VAR fitted, impulse responses not significant because the hourly sentiment series is dominated by zeros, abandoned in favour of the TFT). IRF figure removed from Chapter 4 and the figure registry.
+- **Reasoning.** Defense-risk management: anything in the document is fair game for committee questions, and the VAR internals (lag order, IRF, orthogonalisation) are not something the author is prepared to defend. The abandonment reason that matters is a data property (event-driven sparsity), defensible without VAR expertise. A brief honest mention keeps the "productive failure" argument (justifies the move to the TFT) while removing the attack surface.
+- **What stays.** The sparsity limitation and the OLS -> TFT transition narrative; passing one-line references to the VAR in Phase 1 overviews.
+- **Figures.** Chapter 4 renumbered to 4.1-4.6 (headline comparison, headline divergence, lag OLS, TFT v1 feature importance, TFT v1 attention, TFT v2 attention); registry now 4.1-4.9. `irf_sentiment_to_volume.png` no longer referenced in the thesis (still produced by notebook 08 as a diagnostic).
+
 ---
 
 ## Maintenance

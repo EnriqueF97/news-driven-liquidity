@@ -137,7 +137,7 @@ FinBERT is applied twice per article:
 
 Body content is truncated where necessary, with the title preserved at the start of the sequence so that the most salient signal is never lost to truncation. Articles for which body retrieval failed (Section 3.1) fall back to title-only sentiment as the canonical input, with the body-availability status preserved in the database so downstream analyses can distinguish the two input regimes.
 
-For the lag OLS and VAR analyses (Sections 3.5 and 4.2), we use the FinBERT class probabilities directly rather than the argmax label, so that each article is weighted by the model's confidence instead of collapsing to a hard vote. The two liquidity models consume the probabilities in the form best suited to their question. The lag OLS uses `P(negative)` and `P(positive)` as two separate continuous regressors (Section 3.5.1), which preserves the bearish-versus-bullish asymmetry that RQ2 requires. The VAR, which treats sentiment as a single dynamic axis, uses the signed score `P(positive) − P(negative)` on `[-1, +1]` (Section 3.5.2). The earlier discrete mapping `{positive: +1, neutral: 0, negative: -1}`, which discards the probability magnitudes, is retained only as a baseline for comparison in Section 4.2.3. The title-only probabilities are reserved for the comparative analysis in Section 4.2.2 (the headline bias finding), where they support both a categorical divergence measure and a continuous one.
+For the lag OLS analysis (Sections 3.5.1 and 4.2), we use the FinBERT class probabilities directly rather than the argmax label, so that each article is weighted by the model's confidence instead of collapsing to a hard vote. The lag OLS uses `P(negative)` and `P(positive)` as two separate continuous regressors, which preserves the bearish-versus-bullish asymmetry that RQ2 requires. The earlier discrete mapping `{positive: +1, neutral: 0, negative: -1}`, which discards the probability magnitudes, is retained only as a baseline for comparison in Section 4.2.3. The title-only probabilities are reserved for the comparative analysis in Section 4.2.2 (the headline bias finding), where they support both a categorical divergence measure and a continuous one.
 
 ### 3.3.2 Structured LLM extraction with Claude Haiku
 
@@ -204,7 +204,7 @@ Both filter columns coexist in the database for the Phase 2 corpus, enabling a d
 
 ## 3.5 Statistical models
 
-Two classical time-series models support the empirical analysis of news impact on WTI liquidity. The lag-structured ordinary least squares (OLS) regressions, described in Section 3.5.1, provide the canonical statistical evidence for the research questions on lag structure (RQ1) and bearish-versus-bullish asymmetry (RQ2). The vector autoregression (VAR) model, described in Section 3.5.2, was implemented as a richer dynamic specification capable of representing bidirectional feedback between sentiment and liquidity. The VAR was ultimately abandoned for reasons of signal sparsity, documented in Section 4.2.5, but its specification is included here for completeness and because the abandonment itself motivates the move to the deep learning model of Section 3.6.
+The empirical analysis of news impact on WTI liquidity rests on lag-structured ordinary least squares (OLS) regressions, described in Section 3.5.1, which provide the canonical statistical evidence for the research questions on lag structure (RQ1) and bearish-versus-bullish asymmetry (RQ2). An exploratory vector autoregression was also fitted during development but abandoned: the sparse, event-driven sentiment signal (more than half of all hours carry no contemporaneous news) left it unable to identify significant dynamics. It is not developed as a method here; its outcome, and the move to the deep-learning model of Section 3.6 that it motivated, are noted in Section 4.2.5.
 
 ### 3.5.1 Lag OLS specification
 
@@ -218,36 +218,9 @@ where `P(negative)_t` and `P(positive)_t` are the FinBERT title-plus-body class 
 
 A separate regression is estimated at each lag value `k ∈ {1, 2, 3, 4, 6, 8, 12}`. The lag set is dense at short horizons, where information propagation is expected to be detectable, and sparser at longer horizons, where the effect is expected to attenuate. At each lag, we report the two coefficients, their standard errors, p-values, and the regression R². The R² is expected to be small in absolute terms, since news sentiment is one input among many that influence hourly trading volume; the modelling goal is to detect a structured pattern of coefficients across lags rather than to maximise explanatory power. A statistically significant coefficient at the conventional `p < 0.05` threshold, repeated across multiple adjacent lags with a coherent magnitude pattern, is the criterion for claiming a detectable lag effect.
 
-The contemporaneous specification (`k = 0`) is reported separately as the null reference. At hour `t`, the article has just been published, and any volume effect would require the news to act on the market within the same closing-hour bar. The expectation is that this regression is statistically insignificant; if so, that null result motivates the lagged analysis. Section 4.2.3 reports the contemporaneous result, and Section 4.2.4 reports the lag regressions.
+The contemporaneous specification (`k = 0`) is reported separately as a baseline. At hour `t`, the article has just been published, so a detectable effect requires the news to act on the market within the same one-hour bar. This turns out to be a small but statistically significant effect (Section 4.2.3): rather than a null result, it establishes that sentiment carries detectable signal from the moment of publication and motivates tracing how that signal evolves across the subsequent lags. Section 4.2.3 reports the contemporaneous result, and Section 4.2.4 reports the lag regressions.
 
 All regressions are estimated by ordinary least squares with the default standard error formula. Each observation is a single article. The Phase 1 corpus of 13,690 articles produces between roughly 9,900 and 11,600 per-lag regression rows after dropping articles whose target hour `t + k` falls outside the coverage window (coverage falls as the lag lengthens). The regression treats these as a cross-section of articles rather than as a sequential time series, so heteroskedasticity- and autocorrelation-consistent (HAC) standard error corrections are not applied. The assumption may slightly underestimate true uncertainty if articles published close in time share unobserved common shocks, but the structured pattern of coefficient significance across multiple lags is robust to this concern: even with moderately wider confidence intervals, the pattern of bearish coefficients peaking at lag +6 hours with bullish coefficients showing the same pattern at lower magnitude would survive.
-
-## 3.5.2 Vector autoregression specification
-
-The VAR specification jointly models four variables on an hourly grid:
-
-- `log_volume`: the natural logarithm of hourly trading volume
-- `sentiment_score`: the FinBERT signed score `P(positive) − P(negative)` on `[-1, +1]`, aggregated to hourly resolution as described below
-- `log_return`: the hourly log return
-- `price_range`: the hourly Parkinson range
-
-For each variable `y_i,t` in this four-dimensional vector, the VAR(p) model is
-
-```
-y_i,t = c_i + Σ_{j=1}^4 Σ_{l=1}^p A_{i,j,l} · y_{j, t-l} + u_{i,t}
-```
-
-with the lag order `p` selected by the Akaike information criterion (AIC) over candidate lag orders from 1 to 24 hours, and `u_t` a vector of innovations assumed to be jointly normal. The matrix `A_{·,·,l}` captures the cross-variable dependencies at lag `l`, and the contemporaneous correlation structure is recovered from the covariance matrix of the residuals. Stationarity of all four variables is verified before estimation via Augmented Dickey-Fuller tests; all four pass with p-values close to zero, indicating no unit-root concerns.
-
-The construction of the VAR input matrix is methodologically important. The full hourly trading series for the Phase 1 coverage window is used as the spine: every trading hour contributes one row. The `sentiment_score` value at each hour is the mean of FinBERT scores across articles whose publication time falls within two hours of that trading hour, i.e. articles with `assignment_gap < 2h`. Hours with no contemporaneous articles are assigned `sentiment_score = 0` by convention. This filling rule preserves the joint observation structure that the VAR estimator requires (the four variables must be observed at every time index), but it does so at a methodological cost discussed below.
-
-After cleaning (removing the first hour of each trading session for missing `log_return` and dropping any rows with zero `log_volume`), the VAR is estimated on approximately 10,800 hourly observations.
-
-The output of interest is the impulse response function (IRF), which traces the response of `log_volume` to a one-unit shock to `sentiment_score` over a horizon of 24 hours. The IRF is the natural VAR analogue of the lag OLS coefficients: both measure how the news signal at hour `t` predicts liquidity at subsequent hours, but the VAR additionally accounts for the autoregressive dynamics of `log_volume` itself and for any contemporaneous correlation between the four variables.
-
-The sentiment series in the VAR input is dominated by zeros. The mean and standard deviation of `sentiment_score` across the roughly 10,800 hourly observations are −0.068 and 0.421 respectively, but this masks a more informative breakdown: more than half of all hours have no contemporaneous articles and contribute a value of exactly zero (the median and both inner quartile boundaries around it sit at zero). The VAR estimator cannot distinguish "no news event occurred at this hour" from "the data is missing for this hour"; both produce a zero in the sentiment column. The consequence is that the VAR's estimated dynamics for `sentiment_score` are dominated by the zero-filled hours rather than by the hours where actual news occurred, and the resulting impulse response function carries wide error bands that span zero at most horizons. The detailed empirical findings, including the IRF figure and the reasoning that led to the move to the Temporal Fusion Transformer, are reported in Section 4.2.5.
-
-Amihud illiquidity is not included in the VAR specification. Although Amihud is used as a liquidity feature in both the Phase 1 and Phase 2 TFT models (Section 3.6), it was not added to the four-variable VAR system. With hindsight, including Amihud would have been a reasonable choice, but the VAR's central limitation, the sparsity of the sentiment signal, would not have been alleviated by adding additional liquidity variables. The decision to move beyond the VAR rather than to extend it reflects a methodological judgement that the data structure called for a different model class, not a different variable list.
 
 ## 3.6 Temporal Fusion Transformer
 
