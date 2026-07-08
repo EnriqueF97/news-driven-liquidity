@@ -1,5 +1,5 @@
 target,horizon_h,slice,n,mae,rmse
-log_volume,1,val,1637,0.49439,1.05066
-log_volume,1,test_full,1637,0.47164,0.91166
-log_volume,1,test_prewar,461,0.40778,0.65733
-log_volume,1,test_war,1176,0.49668,0.99376
+log_volume,1,val,2227,0.41753,0.91802
+log_volume,1,test_full,2170,0.45474,0.75773
+log_volume,1,test_prewar,994,0.38861,0.6979
+log_volume,1,test_war,1176,0.51063,0.80483

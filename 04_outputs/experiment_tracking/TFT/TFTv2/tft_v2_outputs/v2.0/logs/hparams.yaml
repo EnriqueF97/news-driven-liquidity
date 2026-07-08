@@ -142,7 +142,7 @@ dataset_parameters:
           - 0
         - false
         - !!binary |
-          5TXv3we1Dz8=
+          1oM2UMn9Dj8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - &id004 !!python/object/apply:numpy.dtype
@@ -160,7 +160,7 @@ dataset_parameters:
         - -1
         - 0
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -175,7 +175,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          FwZScdWZQj8=
+          ChXnY633QT8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -190,7 +190,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          siovTOeflT4=
+          M44OdUotlD4=
       with_mean: true
       with_std: true
     certainty: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -224,12 +224,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          sRh4o/zD0j8=
+          TREpHmF10z8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -244,7 +244,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          D+n2Qr1E2T8=
+          0fdSawN82T8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -259,7 +259,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          F8VdYfvzwz8=
+          vsMx8qVLxD8=
       with_mean: true
       with_std: true
     day_of_week: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -293,12 +293,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          /GMHy3wxAEA=
+          8/cgy+swAEA=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -313,7 +313,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          8mMM0Huu9z8=
+          VUFs4Hy39z8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -328,7 +328,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          EmNnX4mGAUA=
+          g8XJoN+TAUA=
       with_mean: true
       with_std: true
     demand_impact: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -362,12 +362,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          7/Gk09oUoL8=
+          tK3BBhEmob8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -382,7 +382,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          vw5biDu+zD8=
+          is8ixAZIzj8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -397,7 +397,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          M1QBElPRqT8=
+          B1A1zq6nrD8=
       with_mean: true
       with_std: true
     dxy: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -431,12 +431,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          MNX0gBymWUA=
+          0I4E0lDWWUA=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -451,7 +451,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          OuDt0dWDDEA=
+          z7hk4upGCkA=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -466,7 +466,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          EsybU9VoKUA=
+          Ozo+2tqTJUA=
       with_mean: true
       with_std: true
     encoder_length: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -505,7 +505,7 @@ dataset_parameters:
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -569,12 +569,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          pkaq/h747T8=
+          RUxiVRZ57z8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -589,7 +589,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          S3p1iUox9z8=
+          xxUYq6im9z8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -604,7 +604,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          oHWLEifPAEA=
+          QMFab/Z6AUA=
       with_mean: true
       with_std: true
     hour: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -638,12 +638,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          i6dKTRZFJkA=
+          La/DGKlLJkA=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -658,7 +658,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          1askUXDGGkA=
+          AzxjzdG/GkA=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -673,7 +673,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          1/VRE0VnRkA=
+          KJqkwzJcRkA=
       with_mean: true
       with_std: true
     is_us_session: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -707,12 +707,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          3qcEF6tP1z8=
+          eItCooR71z8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -727,7 +727,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          bA8Z/TzM3j8=
+          731sVXrY3j8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -742,7 +742,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          Xjme5AmkzT8=
+          BFGA1Z27zT8=
       with_mean: true
       with_std: true
     is_wednesday: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -776,12 +776,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          QltbRukVyT8=
+          oFTHYLflyD8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -796,7 +796,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          YwrkKLJn2T8=
+          zhG6TitV2T8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -811,7 +811,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          WnOrZlYrxD8=
+          p5RPWfYNxD8=
       with_mean: true
       with_std: true
     log_return: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -845,12 +845,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          qM60NMlqAL8=
+          dBG3IRRC/L4=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -865,7 +865,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          wlqyscrQcT8=
+          XJdzckFQcj8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -880,7 +880,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          oeyuWVPW8z4=
+          l00I0SX29D4=
       with_mean: true
       with_std: true
     log_volume_center: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -914,12 +914,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          Ma1nYSxhIEA=
+          X+zDqjBqIEA=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -983,12 +983,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          SNgVQuOhAUA=
+          UYfHxdKsAUA=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1052,12 +1052,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          i3x16wYavj8=
+          GMmLjFFvvz8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1072,7 +1072,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          +uQHvRAsxz8=
+          D9FwvWCdxz8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1087,7 +1087,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          QvDLvZTHoD8=
+          kIS5DkFtoT8=
       with_mean: true
       with_std: true
     month: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -1121,12 +1121,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          wrQwGK/yGkA=
+          ZP/zUubEGUA=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1141,7 +1141,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          Z0TTGbT9B0A=
+          1bG5xkwHCUA=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1156,7 +1156,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          m7HtUI78IUA=
+          30vRoGmTI0A=
       with_mean: true
       with_std: true
     n_articles: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -1190,12 +1190,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          KrOHCNY+6j8=
+          Xxm1+G/j6z8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1210,7 +1210,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          y9+POdLoMEA=
+          /+OyWoWjMUA=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1225,7 +1225,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          wDNvTuDecUA=
+          RJcrkgJyc0A=
       with_mean: true
       with_std: true
     price_range: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -1259,12 +1259,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          UCWqGnvR1z8=
+          MQN/zI6K2D8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1279,7 +1279,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          wS4izsk+0z8=
+          xvxclbfr0z8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1294,7 +1294,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          bw2ArxUmtz8=
+          +tG6q2TNuD8=
       with_mean: true
       with_std: true
     relative_time_idx: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -1333,7 +1333,7 @@ dataset_parameters:
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1397,12 +1397,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          91b+hd0+jj8=
+          HRtAPyMYiz8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1417,7 +1417,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          y7CIoW3gxD8=
+          qw6s3vd4xT8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1432,7 +1432,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          ltxvFF49mz8=
+          eLKPPR3RnD8=
       with_mean: true
       with_std: true
     sentiment_score: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -1466,12 +1466,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          wCtzUnUNlb8=
+          /mk3XbRslb8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1486,7 +1486,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          JSNm61Nf0D8=
+          21ffIe/O0D8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1501,7 +1501,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          98oPzd/AsD8=
+          BOtcn1KosT8=
       with_mean: true
       with_std: true
     supply_impact: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -1535,12 +1535,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          FhnP+WGlZz8=
+          OMpb7sbwUT8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1555,7 +1555,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          rw1nO2sFyz8=
+          nkuhTXV5yz8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1570,7 +1570,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          +8wn3yXRpj8=
+          z0PJ88KWpz8=
       with_mean: true
       with_std: true
     time_horizon_int: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -1604,12 +1604,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          x6hAsktt5T8=
+          8VnwCtgq5j8=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1624,7 +1624,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          jwJWUHkf7j8=
+          EBbYdpZe7j8=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1639,7 +1639,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          xtN4ayJb7D8=
+          wtqStXHS7D8=
       with_mean: true
       with_std: true
     vix: !!python/object:sklearn.preprocessing._data.StandardScaler
@@ -1673,12 +1673,12 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          +0Po3lgSMkA=
+          3qKQIIhwMkA=
       n_features_in_: 1
       n_samples_seen_: !!python/object/apply:numpy.core.multiarray.scalar
       - *id004
       - !!binary |
-        tx4AAAAAAAA=
+        VBoAAAAAAAA=
       scale_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1693,7 +1693,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          Z4t5TwguFUA=
+          Sb29k354FkA=
       var_: !!python/object/apply:numpy.core.multiarray._reconstruct
         args:
         - *id001
@@ -1708,7 +1708,7 @@ dataset_parameters:
         - *id002
         - false
         - !!binary |
-          1FlsQFoJPEA=
+          4ULbhOeOP0A=
       with_mean: true
       with_std: true
   static_categoricals: []
@@ -1724,8 +1724,8 @@ dataset_parameters:
     method: standard
     method_kwargs: {}
     missing_:
-      center: 8.189791721254185
-      scale: 2.204046741763736
+      center: 8.207402550140781
+      scale: 2.2093863917843146
     norm_: !!python/object:pandas.core.frame.DataFrame
       _flags:
         allows_duplicate_labels: true
@@ -1748,7 +1748,7 @@ dataset_parameters:
             - *id002
             - false
             - !!binary |
-              Mq1nYSxhIEBH2BVC46EBQA==
+              XuzDqjBqIEBSh8fF0qwBQA==
           - !!python/object/apply:builtins.slice
             - 0
             - 2
@@ -1822,7 +1822,7 @@ dataset_parameters:
   - time_horizon_int
   variable_groups: {}
   weight: null
-dropout: 0.1
+dropout: 0.15
 embedding_labels: {}
 embedding_paddings: []
 embedding_sizes: {}
