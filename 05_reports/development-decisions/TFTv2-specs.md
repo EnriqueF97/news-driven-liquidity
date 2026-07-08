@@ -9,6 +9,8 @@ CONTEXT
 - The notebook runs three times by toggling ABLATION_VARIANT at the top to 'v2.0', 'v2.1', or 'v2.2'. Each variant trains a separately-checkpointed model.
 - Target compute: Google Colab Pro (A100/L4/V100). The DB file (wti_thesis.db) is on Google Drive. Local execution should also work as a fallback, with smaller batch.
 
+CANONICAL CONFIG (reported model = exp 2 / run #7 in v2_training_results.md): the final v2.2 uses the 60/20/20 split from config.py, horizons [1, 3, 6, 12], dropout 0.15, and EarlyStopping patience 10. The `dropout = 0.1` and `patience = 5` in the cell specs below were the initial v1-matched ablation baseline (used for the v2.0/v2.1 runs); the canonical v2.2 raised them. See v2_training_results.md run #7 for the reported numbers.
+
 NOTEBOOK STRUCTURE (17 cells, in order)
 
 Cell 1 - Markdown header explaining the notebook's purpose, the three ablation variants, and how to run it.
@@ -17,7 +19,7 @@ Cell 2 - Imports. Standard ML stack: pandas, numpy, sqlite3, pytorch, pytorch-li
 
 Cell 3 - ABLATION_VARIANT toggle (set to 'v2.0', 'v2.1', or 'v2.2') and config verification. Call verify_against_db() if the helper exists in config.py. Define variant-dependent feature flags here (a dict mapping variant -> feature configuration) so the rest of the notebook reads cleanly.
 
-Cell 4 - Load the modeling data. SQL JOIN of market_context, liquidity, llm_features (filtered by usable=1), and article_entities. Aggregate to one row per hour:
+Cell 4 - Load the modeling data. SQL JOIN of market_context, liquidity, llm_features (filtered by usable_strict=1 for all variants in the canonical ablation), and article_entities. Aggregate to one row per hour:
 
 - Continuous LLM features: mean across articles in that hour (sentiment_score, supply_impact, demand_impact, risk_premium, magnitude, certainty)
 - Binary entity flags: max across articles (top 71 canonical entities from article_entities)
@@ -36,13 +38,13 @@ For v2.0: - target = ['log_volume'] - max_prediction_length = 1 - time_varying_k
 
 For v2.1: - Same as v2.0 EXCEPT event_type and time_horizon are proper categoricals, moved to time_varying_known_categoricals (yes, known - they're properties of the news at that hour, which is observed by the time we predict the next hour). Remove the int-encoded versions. - Still no entity flags.
 
-For v2.2: - Same as v2.1 PLUS: - target = ['log_volume', 'amihud', 'price_range'] - max_prediction_length = 28 (encoder remains 48) - Add 71 entity flag columns to time_varying_unknown_reals (the flags are computed at the article's publication hour, so they're 'unknown' in the technical pytorch-forecasting sense; the model uses them through the encoder).
+For v2.2: - Same as v2.1 PLUS: - target = ['log_volume', 'amihud', 'price_range'] - max_prediction_length = 12 (encoder remains 48) - Add 71 entity flag columns to time_varying_unknown_reals (the flags are computed at the article's publication hour, so they're 'unknown' in the technical pytorch-forecasting sense; the model uses them through the encoder).
 
 All three variants share: - max_encoder_length = ENCODER_LENGTH (48) - time_idx = 'time_idx' - group_ids = ['asset'] - allow_missing_timesteps = False - add_relative_time_idx = True - add_target_scales = True - add_encoder_length = True - Use the locked time_idx ranges from Cell 5 for train/val/test boundaries.
 
 Cell 7 - Instantiate TemporalFusionTransformer with v1-matched architecture: - hidden_size = 32 - attention_head_size = 4 - dropout = 0.1 - hidden_continuous_size = 16 - learning_rate = 1e-3 - loss = QuantileLoss() (default 7 quantiles) - reduce_on_plateau_patience = 3 - log_interval = 10 - log_val_interval = 1 - Use TemporalFusionTransformer.from_dataset(train_dataset, ...) so the model is configured to the variant's feature set automatically.
 
-Cell 8 - Set up Trainer: - max*epochs = 50 (early stopping will halt earlier) - gradient_clip_val = 0.1 - accelerator = 'gpu' if available else 'cpu' - callbacks:
+Cell 8 - Set up Trainer: - max*epochs = 75 (early stopping will halt earlier) - gradient_clip_val = 0.1 - accelerator = 'gpu' if available else 'cpu' - callbacks:
 * EarlyStopping(monitor='val_loss', patience=5, min_delta=1e-4)
 * ModelCheckpoint(monitor='val_loss', save_top_k=1, mode='min',
 dirpath='01_data/models/',
@@ -56,7 +58,7 @@ Cell 11 - Load the best checkpoint for evaluation. Use TemporalFusionTransformer
 
 Cell 12 - Generate predictions on val and test sets: - val_predictions = model.predict(val_dataloader, return_index=True, return_x=True, return_y=True) - test_predictions = same on test_dataloader - For v2.2, predictions come back as a dict keyed by target name; handle that case.
 
-Cell 13 - Compute metrics: - For each (target, horizon, slice) compute MAE, RMSE, QuantileLoss (median quantile). - Slices: val, test_full, test_prewar, test_war (use WAR_ONSET_IDX to split test). - For v2.0 and v2.1: target = log_volume, horizons = [1]. So metrics are 1 target _ 1 horizon _ 4 slices = 4 rows. - For v2.2: 3 targets _ 5 horizons _ 4 slices = 60 rows. - Persist as a DataFrame and save to '04_outputs/tft_v2/{variant}/metrics.csv'. - Print a summary table to the notebook.
+Cell 13 - Compute metrics: - For each (target, horizon, slice) compute MAE, RMSE, QuantileLoss (median quantile). - Slices: val, test_full, test_prewar, test_war (use WAR_ONSET_IDX to split test). - For v2.0 and v2.1: target = log_volume, horizons = [1]. So metrics are 1 target _ 1 horizon _ 4 slices = 4 rows. - For v2.2: 3 targets _ 4 horizons _ 4 slices = 48 rows. - Persist as a DataFrame and save to '04_outputs/tft_v2/{variant}/metrics.csv'. - Print a summary table to the notebook.
 
 Cell 14 - Extract feature importance from the VSN. pytorch-forecasting exposes this via model.predict(..., mode='raw') or similar; consult library docs. Aggregate to per-feature mean importance over the val set. Save to '04_outputs/tft_v2/{variant}/feature_importance.json' as a dict {feature_name: importance_weight}.
 
