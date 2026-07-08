@@ -155,7 +155,7 @@ Phase 2 does the deep-learning modeling. It begins with TFT v1 and, after a cali
 ### 5.6 TFT v2 (the canonical reported model)
 
 - **Config:** hidden_size 32, heads 4, dropout 0.15, hidden_continuous_size 16, **298,329 parameters**. Filter `usable_strict=1`.
-- **Multi-target:** predicts `log_volume`, `amihud`, `price_range` jointly. **Multi-horizon:** 1, 3, 6, 12 hours (see Loose ends re: a possible fifth horizon of 28h). 48h encoder.
+- **Multi-target:** predicts `log_volume`, `amihud`, `price_range` jointly. **Multi-horizon:** 1, 3, 6, 12 hours.
 - **Features:** three channels + composite sentiment/magnitude/certainty/n_articles + proper categoricals (`event_type_primary` 8 cats, `time_horizon` 4 cats, with embeddings) + **71 binary entity flags** + market context (log_volume, price_range, log_return, amihud, dxy, vix) + calendar (hour, day_of_week, month, is_us_session, is_wednesday).
 - **Aggregation to hourly:** continuous features averaged across the hour's articles; entity flags use max (any mention sets the flag); categoricals take the highest-magnitude article; news-free hours get a synthetic `no_news` category and zero continuous features.
 - **Training:** `MultiLoss([QuantileLoss()]*3)`, `MultiNormalizer([GroupNormalizer(groups=['asset'])]*3)`, Adam lr 1e-3 with on-plateau reduction (patience 3), gradient clip 0.1, early stopping patience 10, seed 42, deterministic algorithms, Colab T4 GPU. Best validation loss reported as 0.427 at epoch 21 (see Loose ends).
@@ -229,12 +229,10 @@ The intellectual arc: Phase 1 finds the structure and exposes its own limits (co
 
 These are internal inconsistencies and honest weak points. An expert may find them, so know them.
 
-1. **TFT v2 split / horizons / val_loss disagree across sources.** The results section (thesis 4.3.7.2) states a **60/20/20** split (train 6,728, val 2,216, test 2,159), horizons **[1,3,6,12]**, best val_loss **0.427 at epoch 21**. But `AGENTS.md`, the locked `03_src/tft/config.py` constants, and thesis 4.3.8.2 state a **70/15/15** split (train 7,788, val 1,610, test 1,610), horizons **[1,3,6,12,28]**, best val_loss **0.408 at epoch 26**, MAE reductions 41/57/67/73/63. These describe different runs. **Action:** decide which run is canonical, reconcile against `05_reports/v2_training_runs.md` and the training notebook (`02_notebooks/13_tft_v2_training.ipynb`), and make the thesis, AGENTS, and config agree. Until then, quote the 4.3.7 numbers when discussing the reported results and be ready to say "the canonical config is 70/15/15 per config.py; one draft section is out of date."
-2. **Success-criteria wording differs.** Thesis 4.3.7.1/7.7 declares criteria (channels/entities visible; persistence improvement; multi-horizon consistency) and marks all three PASS. `AGENTS.md` lists an older set (channels interpretable; asymmetry p<0.05; multi-horizon matches) with two PARTIAL PASS. Use the thesis version; update AGENTS.
-3. **TFT v1 vs v2 parameter/dropout framing.** Methods 3.6.4 describes a single shared architecture (~113k params, dropout 0.1), but v2 is multi-target/multi-horizon with 298,329 params and dropout 0.15. Make sure you present v1 (~113k, single target, dropout 0.1) and v2 (298k, three targets, dropout 0.15) distinctly.
-4. **RQ2 honesty.** The bearish>bullish asymmetry is significant only in the lag OLS, and even there lag 3 is a minor counterexample; the TFT does not confirm it in point predictions. Frame RQ2 as "robust in the primary OLS evidence, corroborated in direction/temporal structure by the TFT, not independently significant in the TFT."
-5. **Corpus counts vary by analysis.** Phase 1 = 13,690 (regex + title fallback); Phase 2 usable = 11,675; usable_strict ~ 11,433; TFT v1 rows 10,797; hourly grid 11,232. Know which number belongs to which analysis so you are not caught by a "how many articles?" question.
-6. **LLM filter false positives** (e.g. the Canada-EV-tariff article) are a genuine limitation; `usable_strict` mitigates but does not eliminate them.
+1. **TFT v1 vs v2 parameter/dropout framing.** Methods 3.6.4 describes a single shared architecture (~113k params, dropout 0.1), but v2 is multi-target/multi-horizon with 298,329 params and dropout 0.15. Make sure you present v1 (~113k, single target, dropout 0.1) and v2 (298k, three targets, dropout 0.15) distinctly.
+2. **RQ2 honesty.** The bearish>bullish asymmetry is significant only in the lag OLS, and even there lag 3 is a minor counterexample; the TFT does not confirm it in point predictions. Frame RQ2 as "robust in the primary OLS evidence, corroborated in direction/temporal structure by the TFT, not independently significant in the TFT."
+3. **Corpus counts vary by analysis.** Phase 1 = 13,690 (regex + title fallback); Phase 2 usable = 11,675; usable_strict ~ 11,433; TFT v1 rows 10,797; hourly grid 11,232. Know which number belongs to which analysis so you are not caught by a "how many articles?" question.
+4. **LLM filter false positives** (e.g. the Canada-EV-tariff article) are a genuine limitation; `usable_strict` mitigates but does not eliminate them.
 
 ---
 

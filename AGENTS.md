@@ -31,7 +31,7 @@ Do not infer from memory; verify against these files. Exact paths:
 - `05_reports/thesis/draft/3-methods.md` — Chapter 3 draft (Methods).
 - `05_reports/thesis/draft/4-experiments.md` — Chapter 4 draft (Experiments and Results).
 
-For any TFT v2 result (metrics, feature importance, attention patterns), read `05_reports/v2_training_results.md` or the artifacts in `04_outputs/tft_v2/v2.2/`. Numbers are not duplicated here because they go stale.
+For any TFT v2 result (metrics, feature importance, attention patterns), read `05_reports/v2_training_results.md` or the artifacts in `04_outputs/experiment_tracking/TFT/TFTv2/tft_v2_outputs/v2.2/`. Numbers are not duplicated here because they go stale.
 
 ## Repository map
 
@@ -57,8 +57,8 @@ news-driven-liquidity/
 │   ├── features/, models/     # Event windows, OLS baseline
 │   └── config/                # Project config
 ├── 04_outputs/
-│   ├── tft_v2/v2.0 v2.1 v2.2  # Ablation variants; v2.2 is the canonical "TFT v2"
-│   └── figures/, tables/, models/, experiment_tracking/
+│   ├── figures/, tables/, models/
+│   └── experiment_tracking/TFT/TFTv2/tft_v2_outputs/{v2.0,v2.1,v2.2}  # Ablation runs (60/20/20); v2.2 = canonical "TFT v2"
 ├── 05_reports/                # See canonical sources above; also month1/, literature/, calibration/
 ├── old_stuff/                 # Pre-thesis exploration, ignore unless asked
 └── requirements.txt
@@ -95,12 +95,12 @@ Defined in `03_src/tft/config.py`; import from there, never hardcode:
 ```python
 TOTAL_HOURS = 11232
 ENCODER_LENGTH = 48
-MAX_PREDICTION_LENGTH = 28
-TRAIN_END = 7862         # 70%
-VAL_START = 7910         # +48h buffer
-VAL_END = 9547           # 85%
-TEST_START = 9595        # +48h buffer
-TEST_END = 11232
+MAX_PREDICTION_LENGTH = 12
+TRAIN_END = 6739         # 60%
+VAL_START = 6787         # +48h buffer
+VAL_END = 9014           # 20%
+TEST_START = 9062        # +48h buffer
+TEST_END = 11232         # 20%
 WAR_ONSET_IDX = 10056    # "2026-03-01 23:00:00+00:00"
 ```
 
@@ -110,7 +110,7 @@ Do not modify without documenting in `thesis_decisions_log.md`. Call `config.ver
 
 ## TFT v2 canonical model
 
-The reported model is variant **v2.2** (`04_outputs/tft_v2/v2.2/`): trained on `usable_strict=1` articles, multi-target (`log_volume`, `amihud`, `price_range`), multi-horizon `[1, 3, 6, 12, 28]`h, encoder length 48h, with 71 entity flag columns. Variants v2.0 and v2.1 exist only for the ablation (Appendix C). Full configuration in `TFTv2-specs.md`; results in `v2_training_results.md`.
+The reported model is variant **v2.2** (`04_outputs/experiment_tracking/TFT/TFTv2/tft_v2_outputs/v2.2/`): trained on `usable_strict=1` articles, multi-target (`log_volume`, `amihud`, `price_range`), multi-horizon `[1, 3, 6, 12]`h, encoder length 48h, with 71 entity flag columns. Variants v2.0 and v2.1 exist only for the ablation (Appendix C). Full configuration in `TFTv2-specs.md`; results in `v2_training_results.md`.
 
 ## Working rules (non-negotiable)
 
