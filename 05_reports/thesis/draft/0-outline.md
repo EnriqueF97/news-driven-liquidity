@@ -25,7 +25,7 @@ Structural reference for the thesis. The work investigates how news propagates i
   - **RQ1**: lag structure of news impact on liquidity
   - **RQ2**: bearish vs bullish asymmetry in liquidity response
 - 1.4 Contributions
-  - (a) Empirical lag-and-asymmetry finding for WTI at hourly resolution, with peak news impact at lag +6h and a consistent bearish > bullish asymmetry. Supported by lag OLS results (4.2.4) and confirmed by TFT v2 attention patterns (4.3.7).
+  - (a) Empirical lag-and-asymmetry finding for WTI at hourly resolution, with peak news impact at lag +6h and a consistent bearish > bullish asymmetry. Supported by lag OLS results (4.2.3) and confirmed by TFT v2 attention patterns (4.3.7).
   - (b) Methodological contribution: a decomposition of LLM-extracted news features into orthogonal economic channels (supply, demand, risk premium), validated by inter-model calibration. The decomposition improves cross-model agreement on news sentiment by roughly 50 percentage points relative to a single composite score. Supported by 4.3.2–4.3.5.
   - (c) Comparative finding on news content representation: title-only and full-body sentiment extraction disagree on 41.6% of articles, with systematic asymmetry. Supported by 4.2.2.
 - 1.5 Structure of the thesis
@@ -133,7 +133,7 @@ Phase 1's regression-based methods for RQ1 and RQ2 evidence.
 
 ### 3.5.1 Lag OLS specification
 
-Distributed lag regression: `log_volume(t) = β_0 + Σ β_k * sentiment(t-k) + controls`. Motivation, specification, testing procedure. Brief note that an exploratory VAR was fitted and abandoned (sparse sentiment signal), kept as a one-paragraph mention in §4.2.5 with no standalone method section.
+Distributed lag regression: `log_volume(t) = β_0 + Σ β_k * sentiment(t-k) + controls`. Motivation, specification, testing procedure. Brief note that an exploratory VAR was fitted and abandoned (sparse sentiment signal), kept as a one-paragraph mention in §4.2.4 with no standalone method section.
 
 ## 3.6 Temporal Fusion Transformer
 
@@ -197,17 +197,13 @@ Describes the Phase 1 corpus (13,690 articles, regex-filtered), the FinBERT sent
 
 Compares sentiment predicted from title-only vs title+body inputs, demonstrating that FinBERT sentiment is substantially different when body is included. Motivates the LLM-based approach in Phase 2.
 
-### 4.2.3 Contemporaneous OLS
+### 4.2.3 Lag OLS: RQ1 and RQ2
 
-Regression of log_volume on hourly sentiment features. Establishes the baseline association between news and liquidity within the same hour.
+Distributed-lag regression of log_volume on the FinBERT class probabilities across lags k = 0 (contemporaneous) through 12. Identifies the +6h lag as the peak effect (RQ1) and establishes bearish > bullish directional asymmetry (RQ2). This is the primary Phase 1 evidence for both research questions.
 
-### 4.2.4 Lag OLS - RQ1 and RQ2
+### 4.2.4 Phase 1 summary
 
-Distributed lag regression across multiple lags. Identifies the +6h lag as the peak effect (RQ1) and establishes bearish > bullish directional asymmetry (RQ2). This is the primary Phase 1 evidence for both research questions.
-
-### 4.2.5 Phase 1 summary
-
-Consolidates the RQ1 and RQ2 findings from Phase 1 methods. Motivates the transition to Phase 2's richer feature extraction and deep-learning approach.
+Consolidates the RQ1 and RQ2 findings from Phase 1. Notes the abandoned exploratory VAR (sparse sentiment signal) and motivates the transition to Phase 2's richer feature extraction and deep-learning approach.
 
 ## 4.3 Phase 2 - Temporal Fusion Transformer
 
@@ -217,7 +213,7 @@ Introduces the Phase 5 batch and the expanded corpus through May 2026. Documents
 
 ### 4.3.2 LLM feature extraction
 
-Describes the Haiku v2 schema, including channel decomposition (supply/demand/risk_premium), magnitude, certainty, event type, time horizon, and entity extraction. Documents the canonical entity normalization (71 entities, Appendix A).
+Describes the Haiku v2 schema, including channel decomposition (supply/demand/risk_premium), magnitude, certainty, event type, time horizon, and entity extraction. Documents the canonical entity normalization (71 entities, Appendix D).
 
 ### 4.3.3 LLM `usable` flag and filter comparison
 
@@ -249,7 +245,7 @@ Declares the three criteria TFT v2 was designed to satisfy, prior to presenting 
 
 #### 4.3.7.2 Model design
 
-Architecture (hidden_size=32, dropout=0.15), 298k parameters, feature set (channels, entity flags, categoricals, market, macro, calendar), aggregation rules, training procedure (patience=10, best val_loss 0.408 at epoch 26), 70/15/15 split with test set straddling war onset.
+Architecture (hidden_size=32, dropout=0.15), 298k parameters, feature set (channels, entity flags, categoricals, market, macro, calendar), aggregation rules, training procedure (patience=10, best val_loss 0.427 at epoch 10), 60/20/20 split with test set straddling war onset.
 
 #### 4.3.7.3 Predictive performance
 
@@ -277,15 +273,11 @@ Comparative analysis of the two phases as complementary methodologies rather tha
 
 #### 4.3.8.1 What Phase 2 changed methodologically
 
-Four levels of change: corpus expansion (Phase 1 pre-war regex-filtered vs Phase 2 LLM-filtered with war coverage), feature extraction (FinBERT sentiment scalar vs Haiku channels + entities + categoricals), entity normalization (Phase 2 addition), analytical framework (regression vs multi-horizon forecasting).
+Four levels of change: corpus expansion (Phase 1 pre-war regex-filtered vs Phase 2 LLM-filtered with war coverage), feature extraction (FinBERT sentiment scalar vs Haiku channels + entities + categoricals), entity normalization (Phase 2 addition), analytical framework (regression vs multi-horizon forecasting). Feature extraction includes a "tone versus price impact" deep-dive: FinBERT measures surface tone while Haiku scores net WTI price impact; they agree overall (Pearson 0.54) but sign-flip on geopolitical news (negative tone, bullish price), shown with example headlines, the empirical fingerprint of FinBERT's limitation and a reconciliation of the RQ2 divergence.
 
-#### 4.3.8.2 Persistence-relative performance across phases
+#### 4.3.8.2 Why cross-phase numbers are not comparable
 
-Direct numerical comparison rejected (different val sets, loss functions, horizons). Both models substantially beat persistence in their respective val sets. Phase 2's contribution is analytical richness, not raw predictive accuracy.
-
-#### 4.3.8.3 Limitations of cross-phase numerical comparison
-
-Enumerates five specific incomparabilities: different validation sets, loss functions, prediction horizons, feature counts, underlying corpora. Concludes that Phase 2's contribution is methodological progression, not numerical improvement.
+Direct v1-vs-v2 loss comparison rejected: different loss functions, validation periods, horizons, feature counts, and upstream corpora (so v1 val_loss 0.204 vs v2 0.427 is meaningless). Fair comparison is persistence-relative reduction on a shared target/horizon, where both substantially beat persistence. Phase 2's contribution is analytical richness, not a numerical win. (Merges the former 4.3.8.2 and 4.3.8.3.)
 
 ## Chapter 5 - Discussion
 
@@ -322,23 +314,36 @@ Enumerates five specific incomparabilities: different validation sets, loss func
 
 ## Appendices
 
-- A. Haiku extraction prompts (system prompt + tool schema, verbatim)
-- B. Calibration article-by-article comparison table (Haiku v2 vs GPT v2)
-- C. TFT v2 training hyperparameters
-- D. Sample of LLM-rejected articles (illustrating the body_valid vs usable disagreement)
-- E. Complete OLS regression tables (all lags, with full p-values and confidence intervals)
+Appendices are a top-level section following Chapter 6 (Conclusion), drafted in `6-appendices.md`. Letters are ordered by first mention in the text.
 
-## Appendices
+| ID  | Title                               | Scope                                                                                             | Status                     | First referenced |
+| --- | ----------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------- | ---------------- |
+| A   | Extraction prompt                   | Verbatim Haiku v2 system prompt and the `extract_article_features` tool schema                      | Drafted (prompt to insert) | §3.3.2           |
+| B   | LLM extraction schema (v1 vs v2)    | Field-by-field Schema v1 vs v2 comparison and the rationale for each change                         | Drafted                    | §3.3.2           |
+| C   | TFT v2 ablation and hyperparameters | Three-variant ablation (v2.0/v2.1/v2.2) with val_loss, test MAE@1h, top feature; canonical config  | Drafted                    | §4.3.3           |
+| D   | Canonical entity list               | The 71 canonical entities (from `03_src/nlp/llm_features.py`); alias mappings to add               | Drafted                    | §4.3.7.4         |
+| E   | Inter-model calibration comparison  | Article-by-article Haiku vs GPT scores on the 30-article calibration sample                        | Not started                | §4.3.4           |
+| F   | Extended metrics tables             | Full TFT v2 metrics (3 targets × 4 horizons × 4 slices), MAE and RMSE                              | Not started                | §4.3.7.3         |
+| G   | Reproducibility statement           | Library versions, hardware (Colab T4), seed 42, deterministic settings                             | Not started                | §4.3.7.1         |
 
-Central registry of appendices with their scope and current status.
+Optional extras (add if space allows): a sample of LLM-rejected articles illustrating the body_valid-vs-usable disagreement (§4.3.3); the full per-lag OLS regression tables with confidence intervals (§4.2.3).
 
-| ID  | Title                            | Scope                                                                                                                                                                             | Status      | Referenced in    |
-| --- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------- |
-| A   | Canonical entity list            | Complete list of 71 canonical entities with their alias mappings (from `03_src/nlp/llm_features.py`)                                                                              | Not started | §4.3.2           |
-| B   | LLM extraction schema (Haiku v2) | Full schema of the Haiku v2 extraction including channel decomposition fields, entity extraction, magnitude, certainty, event_type, time_horizon                                  | Not started | §4.3.4, §4.3.6   |
-| C   | TFT v2 ablation study            | Three-row table comparing v2.0, v2.1, v2.2 configurations with val_loss, test MAE at 1h, feature importance top-3, and attention peak                                             | Not started | §4.3.7, §4.3.7.3 |
-| D   | Extended metrics tables          | Full 60-row metrics table (3 targets × 5 horizons × 4 slices) with MAE and RMSE for TFT v2                                                                                        | Not started | §4.3.7.2         |
-| E   | Reproducibility statement        | Library versions (torch, pytorch-forecasting, lightning), hardware (Colab T4 GPU), seed (42), deterministic algorithm settings, non-determinism note (upsample_linear1d_backward) | Not started | §4.3.7.1         |
+## Tables
+
+Central registry of tables with their location and content. Numbered sequentially by first appearance in the text.
+
+| ID   | Title                                          | Chapter/Section | Status              |
+| ---- | ---------------------------------------------- | --------------- | ------------------- |
+| 4.1  | Phase 1 modeling dataset construction          | §4.2.1          | Complete (in draft) |
+| 4.2  | Lag OLS regression by horizon (RQ1/RQ2)        | §4.2.3          | Complete (in draft) |
+| 4.3  | Phase 1 vs Phase 2 corpus contrast             | §4.3.1          | Complete (in draft) |
+| 4.4  | Regex vs LLM filter 2x2 contingency            | §4.3.3          | Complete (in draft) |
+| 4.5  | Inter-model re-calibration metrics (v1 vs v2)  | §4.3.6          | Complete (in draft) |
+| 4.6  | TFT v2 log_volume MAE vs persistence           | §4.3.7.3        | Complete (in draft) |
+| 4.7  | TFT v2 amihud MAE vs persistence               | §4.3.7.3        | Complete (in draft) |
+| 4.8  | TFT v2 price_range MAE vs persistence          | §4.3.7.3        | Complete (in draft) |
+| 4.9  | TFT v2 feature importance (VSN top 10)         | §4.3.7.4        | Complete (in draft) |
+| 4.10 | Directional asymmetry t-tests (16 tests)       | §4.3.7.6        | Complete (in draft) |
 
 ## Figures
 
@@ -352,12 +357,12 @@ Central registry of figures with their location and content.
 | 3.2 | Corpus size comparison (Phase 1 vs Phase 2, articles per month)                                        | Bar chart                | §3.X            | Not started                               |
 | 4.1  | Headline bias comparison (title-only vs title+body sentiment)                                          | Grouped bar chart        | §4.2.2          | Complete (`headline_bias_comparison.png`)            |
 | 4.2  | Headline bias divergence magnitude (continuous, abs(signed_full − signed_title))                       | Histogram                | §4.2.2          | Complete (`headline_bias_divergence_magnitude.png`)  |
-| 4.3  | Lag OLS coefficients                                                                                   | Line plot                | §4.2.4          | Complete (`lag_coefficients.png`)                    |
+| 4.3  | Lag OLS coefficients                                                                                   | Line plot                | §4.2.3          | Complete (`lag_coefficients.png`)                    |
 | 4.4  | TFT v1 feature importance (news vs market features)                                                    | Horizontal bar chart     | §4.3.5          | Complete (`tft_feature_importance.png`)              |
 | 4.5  | TFT v1 encoder attention by lag                                                                        | Line plot                | §4.3.5          | Complete (`tft_attention_weights.png`)               |
-| 4.6  | TFT v2 attention pattern (mean encoder attention across 48 lags, disaggregated by sentiment direction) | Line plot                | §4.3.7.4        | Complete (`attention_by_sentiment_tftv2.2-exp2.png`) |
-| 4.7  | TFT v2 feature importance (top 10 features from Variable Selection Network)                            | Horizontal bar chart     | §4.3.7.3        | Not started                                          |
-| 4.8  | Per-horizon prediction error curve (MAE and persistence reduction across horizons for log_volume)      | Line plot with dual axis | §4.3.7.4        | Not started                                          |
-| 4.9  | Directional asymmetry (bearish vs bullish predicted log_volume by horizon and slice)                   | Grouped bar chart        | §4.3.7.5        | Not started                                          |
+| 4.6  | TFT v2 attention pattern (mean encoder attention across 48 lags, disaggregated by sentiment direction) | Line plot                | §4.3.7.5        | Complete (`attention_by_sentiment_tftv2.2-exp2.png`) |
+| 4.7  | TFT v2 feature importance (top 10 features from Variable Selection Network)                            | Horizontal bar chart     | §4.3.7.4        | Not started                                          |
+| 4.8  | Per-horizon prediction error curve (MAE and persistence reduction across horizons for log_volume)      | Line plot with dual axis | §4.3.7.5        | Not started                                          |
+| 4.9  | Directional asymmetry (bearish vs bullish predicted log_volume by horizon and slice)                   | Grouped bar chart        | §4.3.7.6        | Not started                                          |
 | 5.1 | Placeholder for discussion synthesis figure                                                            | TBD                      | §5.X            | Not planned                               |
 | 6.1 | Placeholder for future work overview                                                                   | TBD                      | §6.X            | Not planned                               |
