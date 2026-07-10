@@ -446,7 +446,7 @@ We are keeping the current TFT model with pre-war news, current val loss = 0.209
 ### Calibration v2 — channel decomposition validated (18 May 2026)
 
 - Re-ran 30-article calibration with extended schema (added `supply_impact`, `demand_impact`, `risk_premium` to existing fields).
-- Output: `05_reports/calibration/llm_calibration_v2.json` (Haiku) and reference scores from GPT-4 family on same prompt.
+- Output: `05_reports/calibration/llm_calibration_v2.json` (Haiku) and reference scores from GPT-5.5 on same prompt.
 - `usable` agreement: 27/30 (90%), up from 26/30 (87%) in v1. Three Haiku-rejected articles GPT accepted, all borderline corporate/analyst commentary. Acceptable.
 - Sentiment correlation jumped from 0.39 (v1) to 0.88 (v2). Sign disagreements dropped from 4/13 to 1/14.
 - Per-channel correlation (Haiku vs GPT):

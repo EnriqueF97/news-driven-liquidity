@@ -37,13 +37,31 @@ This dataset is the substrate for the three Phase 1 experiments that follow.
 
 **Continuous result.** The label measure ignores how far sentiment moves and misses shifts inside same-label articles. Defining a signed score `P(positive) − P(negative)` per input and the divergence magnitude `|signed_full − signed_title|`: label flips carry a mean magnitude of **0.96** (near-full reversals), same-label articles still shift by **0.17** on average (31.6% by more than 0.20), and the mean signed shift from title to body is **−0.09**, with 57.6% of articles becoming more bearish once the body is read.
 
-![Headline bias comparison](../../../04_outputs/figures/headline_bias_comparison.png)
+**Worked example.** The quantities are easiest to read on concrete articles. The signed score is `P(positive) − P(negative)`, computed once on the title and once on the title plus body; the magnitude is their absolute distance `|signed_full − signed_title|` (how far sentiment moved), and the signed shift is `signed_full − signed_title` (which direction it moved).
 
-**Figure 4.1: Headline bias comparison across the Phase 1 corpus.** Title vs body sentiment transitions broken out by title classification (negative, neutral, positive). Each panel shows the body-sentiment distribution conditional on the title sentiment. The asymmetric shift toward negative interpretation when the title is positive, and the relative stability of negative titles, is the headline bias finding.
+| Article (title) | signed_title | signed_full | magnitude | signed shift | Label transition |
+| --------------------------------------------- | -----------: | ----------: | --------: | -----------: | ---------------------------- |
+| "Oil price soars above $80"                   |        +0.49 |       −0.63 |      1.12 |        −1.12 | positive → negative (flip)   |
+| "U.S. Oil Is Stealing Market Share from OPEC+" |        −0.32 |       −0.77 |      0.45 |        −0.45 | negative → negative (no flip) |
+| "Oil prices continue to drop in world markets" |        −0.96 |       −0.96 |      0.00 |         0.00 | negative → negative (no flip) |
 
-![Headline bias divergence magnitude](../../../04_outputs/figures/headline_bias_divergence_magnitude.png)
+The first article flips label: a headline FinBERT reads as bullish ("soars above $80") turns bearish once the body is scored, a near-full reversal (magnitude 1.12). The second keeps its negative label yet still moves 0.45 toward more bearish, exactly the within-bucket movement the 41.6% flip rate does not count. The third is stable, title and body agree. In all three the body is at least as bearish as the title, the one-directional pattern behind the −0.09 mean signed shift.
 
-**Figure 4.2: Continuous headline-bias divergence magnitude.** Distribution of the per-article divergence magnitude `|signed_full − signed_title|`, split by whether the argmax label flips. Label flips (red) cluster near a full sentiment reversal (mean 0.96), while same-label articles (green) still carry a non-trivial shift (mean 0.17, with 31.6% exceeding 0.20). The continuous measure captures sentiment movement that the categorical flip rate misses.
+**Divergence and label-flip totals.** The aggregate quantities across the 7,755 title-plus-body articles are collected below.
+
+| Quantity                                       |            Value |
+| ---------------------------------------------- | ---------------: |
+| Label agreement (title and body same label)    |     4,527 (58.4%) |
+| Label flip (disagreement)                      |     3,228 (41.6%) |
+| Flip rate, positive titles                     |            40.8% |
+| Flip rate, neutral titles                      |            69.5% |
+| Flip rate, negative titles                     |            21.8% |
+| Mean divergence magnitude, all articles        |             0.50 |
+| Mean divergence magnitude, label flips         |             0.96 |
+| Mean divergence magnitude, same-label          |             0.17 |
+| Same-label articles with magnitude above 0.20  |            31.6% |
+| Mean signed shift, title to body               |            −0.09 |
+| Articles more bearish once the body is read     |            57.6% |
 
 **Implications.** Two findings carry forward. First, the choice of input regime matters: a pipeline that treats title-only and title-plus-body interchangeably averages over a 41.6% disagreement rate. Second, and against the common intuition that attention-grabbing headlines overstate negativity, **titles lean more bullish than the articles they contain**: reading the body moves FinBERT's sentiment more negative on average, and only the signed continuous score fixes this direction, which the labels alone could not establish. The 5,934 title-only fallback articles therefore carry a sentiment that would have shifted in roughly 40% of cases had a body been available; because that shift is one-directional across all lags, it attenuates rather than inflates the OLS effect reported below. More broadly, this is the first concrete evidence that the choice of news representation matters, and it motivates Phase 2's move to structured extraction from full article bodies (Section 3.3.2).
 
@@ -71,7 +89,7 @@ where `P(negative)_t` and `P(positive)_t` are the title-plus-body FinBERT class 
 **Result.** Table 4.2 reports the regression at every horizon. Each row is one regression at lag `k` (in hours; `k = 0` is the contemporaneous case). The columns are: **β_P(neg)** and **β_P(pos)**, the fitted coefficients on the bearish and bullish class probabilities, that is, the expected change in `log_volume` for a maximally confident bearish or bullish article relative to a neutral one; the two **p** columns, their two-sided p-values (a coefficient is significant at the usual threshold when p < 0.05); **R²**, the share of `log_volume` variance that the two-feature regression explains at that lag; and **n**, the number of articles entering that regression, which falls as `k` grows because targets at hour `t + k` beyond the coverage window are dropped.
 
 ![Lag OLS coefficients and p-values](../../../04_outputs/figures/lag_coefficients.png)
-**Figure 4.3: Lag OLS coefficients and p-values across horizons.** Left panel: the bearish `P(negative)` and bullish `P(positive)` coefficients at lags 1, 2, 3, 4, 6, 8, and 12 hours. Stars mark lags significant at the conventional `p < 0.05` threshold. Right panel: the p-values for the same coefficients, with the `p = 0.05` reference line. The peak at lag +6h is the canonical finding for RQ1; the ordering of bearish above bullish at the dominant lags is the canonical finding for RQ2.
+**Figure 4.1: Lag OLS coefficients and p-values across horizons.** Left panel: the bearish `P(negative)` and bullish `P(positive)` coefficients at lags 1, 2, 3, 4, 6, 8, and 12 hours. Stars mark lags significant at the conventional `p < 0.05` threshold. Right panel: the p-values for the same coefficients, with the `p = 0.05` reference line. The peak at lag +6h is the canonical finding for RQ1; the ordering of bearish above bullish at the dominant lags is the canonical finding for RQ2.
 
 **RQ1 (lag structure).** The impact is already detectable at publication (k = 0), grows over the first hours, peaks sharply at **+6h** (β_P(neg) = 0.342, β_P(pos) = 0.291, both p < 0.001; the +6h bearish coefficient implies roughly 41% more volume than a neutral hour for a fully confident bearish article, `exp(0.342) − 1 ≈ 0.41`), and decays to insignificance by +8h. The pattern is structured rather than a smooth exponential decay, with secondary maxima at +1h and +4h, suggesting discrete information-incorporation events at characteristic horizons.
 
@@ -196,7 +214,7 @@ TFT v1 is the project's first deep-learning model and the first to use the riche
 
 ![TFT v1 feature importance](../../../04_outputs/figures/tft_feature_importance.png)
 
-**Figure 4.4: TFT v1 feature importance, news features (red) versus market features (blue).** `sentiment_score` dominates at 0.53, more than five times the next feature; the market-context features form a second tier and the rest carry minor weight.
+**Figure 4.2: TFT v1 feature importance, news features (red) versus market features (blue).** `sentiment_score` dominates at 0.53, more than five times the next feature; the market-context features form a second tier and the rest carry minor weight.
 
 Three points stand out. First, **`sentiment_score` dominates (0.53, over five times the next feature)**, a strong validation of the LLM approach: the continuous LLM sentiment carries far more signal than any market variable, and far more than the FinBERT label could. Second, **VIX is negligible (0.005)** while DXY ranks third, so for WTI the dollar index already absorbs most of the macro-risk signal. Third, the categorical features (`event_type`, `price_direction`, `time_horizon`) were integer-encoded, imposing a meaningless numeric order that likely understates their informativeness, a limitation fixed in TFT v2.
 
@@ -204,7 +222,7 @@ Three points stand out. First, **`sentiment_score` dominates (0.53, over five ti
 
 ![TFTv1 attention weights](../../../04_outputs/figures/tft_attention_weights.png)
 
-**Figure 4.5: TFT v1 encoder attention by lag.** Mean attention over the 48-hour encoder window, peaking at −4h. Two clusters are visible: a short-term one between −2h and −5h, and a secondary one around −27h to −28h.
+**Figure 4.3: TFT v1 encoder attention by lag.** Mean attention over the 48-hour encoder window, peaking at −4h. Two clusters are visible: a short-term one between −2h and −5h, and a secondary one around −27h to −28h.
 
 **Directional asymmetry (RQ2).** Splitting validation samples by sentiment direction gives the mean predicted `log_volume`:
 
@@ -358,7 +376,7 @@ Research Question 1 asks at what temporal lag news events most strongly affect l
 
 ![Attention by sentiment on v2.2](../../../04_outputs/figures/attention_by_sentiment_tftv2.2-exp2.png)
 
-**Figure 4.6** shows mean encoder attention across the 48-hour window. Overall attention peaks at lag -1h (weight 0.0315) and falls off smoothly through -2h to -5h (0.0308, 0.0304, 0.0301, 0.0300), a graded recency effect with no boundary concentration. Disaggregated by sentiment direction the pattern diverges: bearish-sentiment hours peak at -6h (0.0321) while bullish-sentiment hours peak at -1h (0.0347). The bearish peak at -6h aligns exactly with the +6h lag OLS peak, indicating the model has learned that bearish news requires a longer integration window than bullish news, and independently confirming the same structure Phase 1 found in the average bearish impact.
+**Figure 4.4** shows mean encoder attention across the 48-hour window. Overall attention peaks at lag -1h (weight 0.0315) and falls off smoothly through -2h to -5h (0.0308, 0.0304, 0.0301, 0.0300), a graded recency effect with no boundary concentration. Disaggregated by sentiment direction the pattern diverges: bearish-sentiment hours peak at -6h (0.0321) while bullish-sentiment hours peak at -1h (0.0347). The bearish peak at -6h aligns exactly with the +6h lag OLS peak, indicating the model has learned that bearish news requires a longer integration window than bullish news, and independently confirming the same structure Phase 1 found in the average bearish impact.
 
 **Synthesis on RQ1.** Both diagnostics corroborate the lag OLS finding through methodologically distinct views: the per-horizon error curve peaks in the +6h to +12h range, and the bearish-sentiment attention peaks precisely at -6h. Together they give the +6h lag substantive empirical support from two independent analyses.
 
@@ -443,4 +461,4 @@ The methodological comparison of the two phases (§4.3.8) argued that direct num
 
 The success criteria established for TFT v2 in advance of training were evaluated in §4.3.7.7, and all three pass: Criterion 1 (channels and entities as visible drivers of prediction), Criterion 2 (substantial persistence-relative improvement, with price_range the exception on the unseen war regime), and Criterion 3 (multi-horizon error curve and attention consistent with Phase 1's +6h lag). The evaluation refines what the Phase 1 findings mean through a different methodological lens and exposes the price_range regime-extrapolation limitation that informs the discussion in Chapter 5.
 
-Chapter 5 develops the theoretical and practical implications of these findings. Chapter 6 addresses limitations and directions for future work.
+Chapter 5 develops the implications of these findings, together with the limitations and directions for future work. Chapter 6 concludes.

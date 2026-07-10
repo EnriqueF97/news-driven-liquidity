@@ -66,7 +66,7 @@ Russia oil exports
 oil supply disruption
 ```
 
-The expanded scrape was extended through May 2026, raising the total corpus to 22,795 article records spanning January 2024 to May 2026. Across the full Phase 2 corpus, 19,619 articles produced a real body; the remaining 2,749 yielded either a null response, a Cloudflare or paywall block, or an explicit fetch error. The choice to forward articles without bodies into LLM-based filtering rather than retain a title-only fallback path is discussed in Section 3.4.
+The expanded scrape, re-run over the full window through May 2026 with both query sets, produced 76,345 raw article records spanning January 2024 to May 2026. After deduplication and English-only filtering, 22,795 unique articles remained, the modeling-ready Phase 2 corpus (Section 4.3.1). Across this corpus, 19,619 articles produced a real body; the remaining 3,176 yielded either a null response, a Cloudflare or paywall block, or an explicit fetch error. The choice to forward articles without bodies into LLM-based filtering rather than retain a title-only fallback path is discussed in Section 3.4.
 
 ### 3.1.5 Persistence
 
@@ -296,7 +296,7 @@ The Haiku-extracted feature set described in Section 3.3 is the substrate of all
 
 The standard approach to validating an NLP extraction is to compare model output against human-annotated ground truth on a labelled subset of the data. For this thesis, that approach is not feasible. Human annotation of WTI-relevant news articles requires domain expertise in oil markets and trading that the author does not possess, and a single non-expert annotator working at scale would introduce noise of unknown structure into the validation set rather than reduce it. Recruiting a third-party expert at scale was outside the resource scope of the project.
 
-We adopt instead an inter-model calibration approach: the same articles, with the same extraction prompt and tool schema, are scored by Claude Haiku 4.5 and by a GPT-family reference model (the OpenAI GPT-4 series via the ChatGPT interface). Disagreement between two models from different developer families on the same input is informative in a different way than human disagreement, but is informative nonetheless. The argument for treating it as a useful validation signal is the following.
+We adopt instead an inter-model calibration approach: the same articles, with the same extraction prompt and tool schema, are scored by Claude Haiku 4.5 and by a GPT-family reference model (OpenAI's GPT-5.5, via the ChatGPT interface). Disagreement between two models from different developer families on the same input is informative in a different way than human disagreement, but is informative nonetheless. The argument for treating it as a useful validation signal is the following.
 
 Each model encodes its own implicit notion of news interpretation, shaped by its training data, its alignment procedure, and the family-level inductive biases of its developer. The two models share little in their training data composition or alignment style. When they agree on an extraction, that agreement reflects content that is robust to two independently-trained interpretations of financial news. When they disagree, the disagreement points to either genuine ambiguity in the article or to a systematic bias in one of the models.
 

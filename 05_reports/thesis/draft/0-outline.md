@@ -284,17 +284,22 @@ Direct v1-vs-v2 loss comparison rejected: different loss functions, validation p
 **Purpose:** Interpret the findings, contextualize them in the literature, identify limitations.
 
 - 5.1 Findings on RQ1 (lag structure)
-  - The lag +6h peak in OLS, confirmed by TFT v2 attention
-  - What this means about how news information propagates
+  - The lag +6h peak in OLS, confirmed by TFT v2 per-horizon error curve and direction-conditioned attention (bearish -6h)
+  - What this means: news propagates over a +6 to +12h window, not instantaneously
 - 5.2 Findings on RQ2 (asymmetry)
-  - Bearish > bullish in OLS is statistically robust
-  - TFT directional asymmetry test underpowered; lag OLS retains canonical evidence
+  - Bearish > bullish in OLS is statistically robust and remains the primary evidence (a marginal-coefficient sensitivity)
+  - The TFT group-mean asymmetry test is null, but this is a DIFFERENT, coarser estimand (group means of predicted volume vs OLS marginal coefficients), NOT underpowered and NOT a failed replication: verified robust to the sentiment threshold (0.0 to 0.5), groups hold hundreds of samples, and the ground-truth target is itself near-symmetric over the test period
+  - Reconciliation via tone versus price impact: FinBERT (tone) and Haiku (net price impact) agree overall (Pearson 0.54) but sign-flip on geopolitical news (the high-volume subset), so the two phases' sentiment-sign analyses can point differently
+  - The model keys on risk/salience features (VIX, channels, Hormuz-region entities), direction-agnostic, which is why no bearish>bullish separation appears in its point predictions
 - 5.3 Methodological contributions
-  - Channel decomposition as a response to inter-model calibration failure
+  - Channel decomposition as a response to inter-model calibration failure (grounded in Kilian 2009's supply/demand/risk shock decomposition)
+  - Tone versus price impact: tone classifiers (FinBERT) and LLM price-direction reasoning (Haiku) measure different constructs; the LLM captures the asset-specific causal step (supply threat to higher price) that a tone classifier cannot
   - LLM-as-filter as an alternative to regex heuristics for noisy news corpora
   - Phase-based pipeline progression as a reproducible template for similar empirical work
 - 5.4 Limitations
   - Inter-LLM calibration is methodologically weaker than human ground truth
+  - price_range regime-extrapolation failure: trained only on the pre-war regime, the model reverts toward the mean and underperforms persistence on the unseen war-regime volatility (§4.3.7.3)
+  - Sentiment findings are construct-dependent (tone vs price impact); RQ2 conclusions are conditional on which sentiment definition is used
   - GDELT corpus skews retail-aimed news rather than institutional-grade feeds
   - 24-month dataset with regime change (Iran war) introduces non-stationarity
   - Single-commodity scope; results may not generalize to other commodities or asset classes
@@ -318,13 +323,13 @@ Appendices are a top-level section following Chapter 6 (Conclusion), drafted in 
 
 | ID  | Title                               | Scope                                                                                             | Status                     | First referenced |
 | --- | ----------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------- | ---------------- |
-| A   | Extraction prompt                   | Verbatim Haiku v2 system prompt and the `extract_article_features` tool schema                      | Drafted (prompt to insert) | §3.3.2           |
-| B   | LLM extraction schema (v1 vs v2)    | Field-by-field Schema v1 vs v2 comparison and the rationale for each change                         | Drafted                    | §3.3.2           |
-| C   | TFT v2 ablation and hyperparameters | Three-variant ablation (v2.0/v2.1/v2.2) with val_loss, test MAE@1h, top feature; canonical config  | Drafted                    | §4.3.3           |
-| D   | Canonical entity list               | The 71 canonical entities (from `03_src/nlp/llm_features.py`); alias mappings to add               | Drafted                    | §4.3.7.4         |
-| E   | Inter-model calibration comparison  | Article-by-article Haiku vs GPT scores on the 30-article calibration sample                        | Not started                | §4.3.4           |
-| F   | Extended metrics tables             | Full TFT v2 metrics (3 targets × 4 horizons × 4 slices), MAE and RMSE                              | Not started                | §4.3.7.3         |
-| G   | Reproducibility statement           | Library versions, hardware (Colab T4), seed 42, deterministic settings                             | Not started                | §4.3.7.1         |
+| A   | Extraction prompt                   | Verbatim Haiku v2 system prompt and the `extract_article_features` tool schema                    | Drafted (prompt to insert) | §3.3.2           |
+| B   | LLM extraction schema (v1 vs v2)    | Field-by-field Schema v1 vs v2 comparison and the rationale for each change                       | Drafted                    | §3.3.2           |
+| C   | TFT v2 ablation and hyperparameters | Three-variant ablation (v2.0/v2.1/v2.2) with val_loss, test MAE@1h, top feature; canonical config | Drafted                    | §4.3.3           |
+| D   | Canonical entity list               | The 71 canonical entities (from `03_src/nlp/llm_features.py`); alias mappings to add              | Drafted                    | §4.3.7.4         |
+| E   | Inter-model calibration comparison  | Article-by-article Haiku vs GPT scores on the 30-article calibration sample                       | Not started                | §4.3.4           |
+| F   | Extended metrics tables             | Full TFT v2 metrics (3 targets × 4 horizons × 4 slices), MAE and RMSE                             | Not started                | §4.3.7.3         |
+| G   | Reproducibility statement           | Library versions, hardware (Colab T4), seed 42, deterministic settings                            | Not started                | §4.3.7.1         |
 
 Optional extras (add if space allows): a sample of LLM-rejected articles illustrating the body_valid-vs-usable disagreement (§4.3.3); the full per-lag OLS regression tables with confidence intervals (§4.2.3).
 
@@ -332,37 +337,35 @@ Optional extras (add if space allows): a sample of LLM-rejected articles illustr
 
 Central registry of tables with their location and content. Numbered sequentially by first appearance in the text.
 
-| ID   | Title                                          | Chapter/Section | Status              |
-| ---- | ---------------------------------------------- | --------------- | ------------------- |
-| 4.1  | Phase 1 modeling dataset construction          | §4.2.1          | Complete (in draft) |
-| 4.2  | Lag OLS regression by horizon (RQ1/RQ2)        | §4.2.3          | Complete (in draft) |
-| 4.3  | Phase 1 vs Phase 2 corpus contrast             | §4.3.1          | Complete (in draft) |
-| 4.4  | Regex vs LLM filter 2x2 contingency            | §4.3.3          | Complete (in draft) |
-| 4.5  | Inter-model re-calibration metrics (v1 vs v2)  | §4.3.6          | Complete (in draft) |
-| 4.6  | TFT v2 log_volume MAE vs persistence           | §4.3.7.3        | Complete (in draft) |
-| 4.7  | TFT v2 amihud MAE vs persistence               | §4.3.7.3        | Complete (in draft) |
-| 4.8  | TFT v2 price_range MAE vs persistence          | §4.3.7.3        | Complete (in draft) |
-| 4.9  | TFT v2 feature importance (VSN top 10)         | §4.3.7.4        | Complete (in draft) |
-| 4.10 | Directional asymmetry t-tests (16 tests)       | §4.3.7.6        | Complete (in draft) |
+| ID   | Title                                         | Chapter/Section | Status              |
+| ---- | --------------------------------------------- | --------------- | ------------------- |
+| 4.1  | Phase 1 modeling dataset construction         | §4.2.1          | Complete (in draft) |
+| 4.2  | Lag OLS regression by horizon (RQ1/RQ2)       | §4.2.3          | Complete (in draft) |
+| 4.3  | Phase 1 vs Phase 2 corpus contrast            | §4.3.1          | Complete (in draft) |
+| 4.4  | Regex vs LLM filter 2x2 contingency           | §4.3.3          | Complete (in draft) |
+| 4.5  | Inter-model re-calibration metrics (v1 vs v2) | §4.3.6          | Complete (in draft) |
+| 4.6  | TFT v2 log_volume MAE vs persistence          | §4.3.7.3        | Complete (in draft) |
+| 4.7  | TFT v2 amihud MAE vs persistence              | §4.3.7.3        | Complete (in draft) |
+| 4.8  | TFT v2 price_range MAE vs persistence         | §4.3.7.3        | Complete (in draft) |
+| 4.9  | TFT v2 feature importance (VSN top 10)        | §4.3.7.4        | Complete (in draft) |
+| 4.10 | Directional asymmetry t-tests (16 tests)      | §4.3.7.6        | Complete (in draft) |
 
 ## Figures
 
 Central registry of figures with their location and content.
 
-| ID  | Title                                                                                                  | Type                     | Chapter/Section | Status                                    |
-| --- | ------------------------------------------------------------------------------------------------------ | ------------------------ | --------------- | ----------------------------------------- |
-| 1   | Placeholder for first figure in Chapter 1 (Introduction)                                               | TBD                      | §1.X            | Not planned                               |
-| 2   | Placeholder for first figure in Chapter 2 (Background)                                                 | TBD                      | §2.X            | Not planned                               |
-| 3.1 | Data pipeline overview (Phase 1 vs Phase 2 flow)                                                       | Diagram                  | §3.X            | Not started                               |
-| 3.2 | Corpus size comparison (Phase 1 vs Phase 2, articles per month)                                        | Bar chart                | §3.X            | Not started                               |
-| 4.1  | Headline bias comparison (title-only vs title+body sentiment)                                          | Grouped bar chart        | §4.2.2          | Complete (`headline_bias_comparison.png`)            |
-| 4.2  | Headline bias divergence magnitude (continuous, abs(signed_full − signed_title))                       | Histogram                | §4.2.2          | Complete (`headline_bias_divergence_magnitude.png`)  |
-| 4.3  | Lag OLS coefficients                                                                                   | Line plot                | §4.2.3          | Complete (`lag_coefficients.png`)                    |
-| 4.4  | TFT v1 feature importance (news vs market features)                                                    | Horizontal bar chart     | §4.3.5          | Complete (`tft_feature_importance.png`)              |
-| 4.5  | TFT v1 encoder attention by lag                                                                        | Line plot                | §4.3.5          | Complete (`tft_attention_weights.png`)               |
-| 4.6  | TFT v2 attention pattern (mean encoder attention across 48 lags, disaggregated by sentiment direction) | Line plot                | §4.3.7.5        | Complete (`attention_by_sentiment_tftv2.2-exp2.png`) |
-| 4.7  | TFT v2 feature importance (top 10 features from Variable Selection Network)                            | Horizontal bar chart     | §4.3.7.4        | Not started                                          |
-| 4.8  | Per-horizon prediction error curve (MAE and persistence reduction across horizons for log_volume)      | Line plot with dual axis | §4.3.7.5        | Not started                                          |
-| 4.9  | Directional asymmetry (bearish vs bullish predicted log_volume by horizon and slice)                   | Grouped bar chart        | §4.3.7.6        | Not started                                          |
-| 5.1 | Placeholder for discussion synthesis figure                                                            | TBD                      | §5.X            | Not planned                               |
-| 6.1 | Placeholder for future work overview                                                                   | TBD                      | §6.X            | Not planned                               |
+| ID  | Title                                                                                                  | Type                     | Chapter/Section | Status                                               |
+| --- | ------------------------------------------------------------------------------------------------------ | ------------------------ | --------------- | ---------------------------------------------------- |
+| 1   | Placeholder for first figure in Chapter 1 (Introduction)                                               | TBD                      | §1.X            | Not planned                                          |
+| 2   | Placeholder for first figure in Chapter 2 (Background)                                                 | TBD                      | §2.X            | Not planned                                          |
+| 3.1 | Data pipeline overview (Phase 1 vs Phase 2 flow)                                                       | Diagram                  | §3.X            | Not started                                          |
+| 3.2 | Corpus size comparison (Phase 1 vs Phase 2, articles per month)                                        | Bar chart                | §3.X            | Not started                                          |
+| 4.1 | Lag OLS coefficients                                                                                   | Line plot                | §4.2.3          | Complete (`lag_coefficients.png`)                    |
+| 4.2 | TFT v1 feature importance (news vs market features)                                                    | Horizontal bar chart     | §4.3.5          | Complete (`tft_feature_importance.png`)              |
+| 4.3 | TFT v1 encoder attention by lag                                                                        | Line plot                | §4.3.5          | Complete (`tft_attention_weights.png`)               |
+| 4.4 | TFT v2 attention pattern (mean encoder attention across 48 lags, disaggregated by sentiment direction) | Line plot                | §4.3.7.5        | Complete (`attention_by_sentiment_tftv2.2-exp2.png`) |
+| 4.5 | TFT v2 feature importance (top 10 features from Variable Selection Network)                            | Horizontal bar chart     | §4.3.7.4        | Not started                                          |
+| 4.6 | Per-horizon prediction error curve (MAE and persistence reduction across horizons for log_volume)      | Line plot with dual axis | §4.3.7.5        | Not started                                          |
+| 4.7 | Directional asymmetry (bearish vs bullish predicted log_volume by horizon and slice)                   | Grouped bar chart        | §4.3.7.6        | Not started                                          |
+| 5.1 | Placeholder for discussion synthesis figure                                                            | TBD                      | §5.X            | Not planned                                          |
+| 6.1 | Placeholder for future work overview                                                                   | TBD                      | §6.X            | Not planned                                          |
