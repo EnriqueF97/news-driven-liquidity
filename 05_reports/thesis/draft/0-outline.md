@@ -329,7 +329,7 @@ Appendices are a top-level section following Chapter 6 (Conclusion), drafted in 
 | D   | Canonical entity list               | The 71 canonical entities (from `03_src/nlp/llm_features.py`); alias mappings to add              | Drafted                    | §4.3.7.4         |
 | E   | Inter-model calibration comparison  | Article-by-article Haiku vs GPT scores on the 30-article calibration sample                       | Not started                | §4.3.4           |
 | F   | Extended metrics tables             | Full TFT v2 metrics (3 targets × 4 horizons × 4 slices), MAE and RMSE                             | Not started                | §4.3.7.3         |
-| G   | Reproducibility statement           | Library versions, hardware (Colab T4), seed 42, deterministic settings                            | Not started                | §4.3.7.1         |
+| G   | Reproducibility statement           | Software libraries and versions, models/APIs, data sources (GDELT/EIA/yfinance), hardware, seed 42 | Drafted                    | §3.1, §4.3.7     |
 
 Optional extras (add if space allows): a sample of LLM-rejected articles illustrating the body_valid-vs-usable disagreement (§4.3.3); the full per-lag OLS regression tables with confidence intervals (§4.2.3).
 

@@ -57,3 +57,36 @@ The reported TFT v2 (variant v2.2) was selected through a three-variant ablation
 The 71 canonical entities used as TFT v2 entity flags (from `03_src/nlp/llm_features.py`), each mapped from raw article mentions via the normalization of §4.3.2 (alias mappings omitted here for brevity):
 
 US, Iran, Russia, China, Israel, India, Saudi Arabia, Ukraine, Venezuela, Canada, Iraq, Nigeria, UAE, Kazakhstan, Qatar, Oman, Japan, Kuwait, Pakistan, Libya, Mexico, Azerbaijan, Yemen, Lebanon, Brazil, South Korea, Guyana, UK, Algeria, Germany, Australia, Hungary, Egypt, Türkiye, Strait of Hormuz, Middle East, Gaza, Red Sea, Persian Gulf, Gulf of Mexico, Permian Basin, Europe, Asia, Trump, Maduro, Putin, Powell, Bessent, Biden, OPEC+, OPEC, Fed, EU, EIA, IEA, API, ECB, Hamas, Hezbollah, Houthis, Saudi Aramco, Chevron, Shell, BP, ExxonMobil, Rosneft, Lukoil, TotalEnergies, WTI, Brent, S&P 500.
+
+## Appendix G: Reproducibility statement
+
+The Phase 2 training was run on Google Colab (T4 GPU); the LLM extraction and the Phase 1 analyses were run locally (Apple Silicon, MPS backend). Software versions with a paper of record are cited; the rest are attributed here by name, version, and source.
+
+**Software libraries.** Version constraints are pinned in the training notebook `02_notebooks/13_tft_v2_training_colab.ipynb`.
+
+| Library                    | Version        | Role                                                   |
+| -------------------------- | -------------- | ------------------------------------------------------ |
+| Python                     | 3.x            | runtime                                                |
+| `numpy`                    | < 2.0          | numerics                                               |
+| `pandas`                   | —              | data processing and hourly aggregation                 |
+| PyTorch (`torch`)          | >= 2.3, < 2.4  | deep-learning backend                                  |
+| Lightning (`lightning`)    | >= 2.2, < 2.4  | training loop                                          |
+| `pytorch-forecasting`      | >= 1.0, < 1.2  | TFT implementation and `TimeSeriesDataSet`             |
+| HuggingFace `transformers` | —              | FinBERT inference [CITE: Wolf et al. 2020]             |
+| `yfinance`                 | —              | market-data retrieval                                  |
+| `beautifulsoup4`           | —              | article-body HTML parsing                              |
+| `scipy`                    | —              | statistical tests (Welch t-test, correlations)         |
+| `sqlite3` (stdlib)         | —              | database                                               |
+
+**Models and APIs.**
+
+- Claude Haiku 4.5 (Anthropic), via the tool-use API, for Phase 2 feature extraction (§3.3).
+- GPT-5.5 (OpenAI), via the ChatGPT interface, as the inter-model calibration reference (§3.7).
+
+**Data sources.**
+
+- GDELT 2.0 Document API [CITE: Leetaru & Schrodt 2013], for news article metadata (`https://www.gdeltproject.org`).
+- U.S. Energy Information Administration (EIA) v2 API, weekly crude inventory series `WCRSTUS1` (`https://www.eia.gov/opendata/`).
+- yfinance / Yahoo Finance, hourly OHLCV for `CL=F`, `DX-Y.NYB`, and `^VIX`.
+
+**Determinism.** The reported TFT v2 run fixes the random seed to 42 with deterministic algorithms; its exact configuration is stored in `run_metadata.json`. Exact pinned library versions and data-source access dates are to be recorded from the environment at finalisation.

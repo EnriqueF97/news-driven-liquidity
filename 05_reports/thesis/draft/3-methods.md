@@ -10,7 +10,7 @@ WTI crude oil futures were chosen as the target commodity after preliminary scre
 
 ### 3.1.2 Market data
 
-Hourly OHLCV data are retrieved via the yfinance Python library [N] for three instruments:
+Hourly OHLCV data are retrieved via the yfinance Python library [CITE: yfinance] for three instruments:
 
 - `CL=F`: WTI crude oil front-month futures contract, the primary target series
 - `DX-Y.NYB`: the U.S. Dollar Index (DXY), used as a macroeconomic covariate
@@ -20,26 +20,26 @@ DXY and VIX enter as exogenous controls in the Phase 2 modeling pipeline (Sectio
 From the raw OHLCV records, we derive three liquidity and volatility proxies and one return measure at hourly resolution:
 
 - `log_volume`: the natural logarithm of contracts traded per hour, used as the primary liquidity measure
-- `price_range`: the hourly Parkinson range, computed as `log(high) − log(low)`, a high-frequency volatility proxy
+- `price_range`: the hourly Parkinson range [CITE: Parkinson 1980], computed as `log(high) − log(low)`, a high-frequency volatility proxy
 - `log_return`: the hourly log return, `log(close_t / close_{t-1})`
-- `amihud`: the Amihud illiquidity ratio at hourly resolution, computed as `|log_return| / volume` following [Amihud, N]. The ratio is undefined for hours with zero volume; such rows are excluded from analyses where Amihud is the dependent variable.
+- `amihud`: the Amihud illiquidity ratio at hourly resolution, computed as `|log_return| / volume` following [CITE: Amihud 2002]. The ratio is undefined for hours with zero volume; such rows are excluded from analyses where Amihud is the dependent variable.
 
 The canonical market grid spans 13 May 2024 to 13 May 2026, yielding 11,232 hourly observations across roughly 24 months of trading. The Phase 1 analysis (Section 4.2.1) ran on an earlier market pull that reached further back, approximately March 2024 to March 2026 (11,219 aligned market hours), and those values are preserved with the Phase 1 features. The two windows differ because yfinance serves hourly data only for a rolling window of about the last two years: by the time the market data was re-pulled and the corpus extended through the post-war period for Phase 2 (Section 4.3.1), the earliest hours of 2024 had dropped out of that window, so the Phase 2 grid begins in May 2024. The roughly 13-hour gap between the two counts is immaterial to any result and reflects only this re-pull, not a change in methodology.
 
 ### 3.1.3 EIA inventory data
 
-Weekly U.S. commercial crude oil inventory reports are retrieved from the U.S. Energy Information Administration (EIA) v2 API [N]. We query the WCRSTUS1 series (weekly ending stocks of crude oil and petroleum products, U.S. total), specifying `frequency=weekly`. The full historical series from January 2020 onward is downloaded to allow computation of rolling baselines, even though only the 2024–2026 window is used in modeling.
+Weekly U.S. commercial crude oil inventory reports are retrieved from the U.S. Energy Information Administration (EIA) v2 API [CITE: EIA]. We query the WCRSTUS1 series (weekly ending stocks of crude oil and petroleum products, U.S. total), specifying `frequency=weekly`. The full historical series from January 2020 onward is downloaded to allow computation of rolling baselines, even though only the 2024–2026 window is used in modeling.
 
 Each weekly release is converted into two derived features available at hourly resolution after temporal alignment:
 
 - `is_eia_release`: a binary indicator that fires on the trading hour containing or immediately following the official release time
 - `eia_surprise`: the weekly inventory change relative to a rolling four-week baseline, capturing the directional surprise component of each release
 
-EIA releases occur on Wednesdays at 10:30 a.m. U.S. Eastern Time and are among the most consistently market-moving scheduled events in WTI trading [N]. In the reported models the EIA cycle enters only through the `is_wednesday` calendar proxy (Section 3.6.2). The `is_eia_release` and `eia_surprise` features were computed and stored, and were tested in an additional model run: the continuous surprise carried negligible feature importance and the release flag added little beyond the calendar proxy, so neither is part of the canonical model.
+EIA releases occur on Wednesdays at 10:30 a.m. U.S. Eastern Time and are a regularly scheduled, closely watched event in oil markets, which is why we derive EIA features from them. In the reported models, however, the EIA cycle enters only through the `is_wednesday` calendar proxy (Section 3.6.2): the `is_eia_release` and `eia_surprise` features were computed and stored, and tested in an additional model run, but the continuous surprise carried negligible feature importance and the release flag added little beyond the calendar proxy, so neither is part of the canonical model.
 
 ### 3.1.4 News data
 
-Unstructured news content is sourced from the GDELT Project [N], a large-scale machine-monitored news corpus covering broadcast, print, and web sources worldwide. We use the GDELT 2.0 Document API to retrieve article metadata (URL, source, publication time, title) across a set of thematic queries chosen to capture WTI-relevant content.
+Unstructured news content is sourced from the GDELT Project [CITE: Leetaru & Schrodt 2013], a large-scale machine-monitored news corpus covering broadcast, print, and web sources worldwide. We use the GDELT 2.0 Document API to retrieve article metadata (URL, source, publication time, title) across a set of thematic queries chosen to capture WTI-relevant content.
 
 The query set evolved across the two methodological phases. In Phase 1, the focus was on direct oil-market terms, yielding eight queries:
 
@@ -120,9 +120,9 @@ News articles are unstructured text; downstream statistical and deep learning mo
 
 ### 3.3.1 FinBERT sentiment extraction
 
-In Phase 1, we use FinBERT [N], a BERT variant fine-tuned on financial text for three-class sentiment classification (positive, neutral, negative). FinBERT is among the most widely used sentiment models in financial NLP and provides a natural baseline for comparison.
+In Phase 1, we use FinBERT [CITE: Araci 2019], a BERT variant fine-tuned on financial text for three-class sentiment classification (positive, neutral, negative). FinBERT is among the most widely used sentiment models in financial NLP and provides a natural baseline for comparison.
 
-The model is applied via the HuggingFace Transformers library [N], running on Apple Silicon GPU acceleration via the MPS backend. For each article, the model returns softmax probabilities over the three classes; the predicted label is taken as the argmax of these probabilities, and a scalar `confidence` value is recorded as the maximum class probability:
+The model is applied via the HuggingFace Transformers library [CITE: Wolf et al. 2020], running on Apple Silicon GPU acceleration via the MPS backend. For each article, the model returns softmax probabilities over the three classes; the predicted label is taken as the argmax of these probabilities, and a scalar `confidence` value is recorded as the maximum class probability:
 
 ```
 confidence = max(P_positive, P_negative, P_neutral)
@@ -141,13 +141,13 @@ For the lag OLS analysis (Sections 3.5.1 and 4.2), we use the FinBERT class prob
 
 ### 3.3.2 Structured LLM extraction with Claude Haiku
 
-In Phase 2, FinBERT is replaced by Claude Haiku 4.5 [N], a smaller-scale member of Anthropic's Claude model family, used to extract a richer set of structured features from each article. The motivation for moving from FinBERT to an LLM is taken up in detail in Chapter 4 (Section 4.3.2); briefly, the three-class categorical output of FinBERT collapses information that is naturally continuous and multidimensional, and the confidence value (the maximum class probability) carries limited downstream signal.
+In Phase 2, FinBERT is replaced by Claude Haiku 4.5 [CITE: Anthropic Claude], a smaller-scale member of Anthropic's Claude model family, used to extract a richer set of structured features from each article. The motivation for moving from FinBERT to an LLM is taken up in detail in Chapter 4 (Section 4.3.2); briefly, the three-class categorical output of FinBERT collapses information that is naturally continuous and multidimensional, and the confidence value (the maximum class probability) carries limited downstream signal.
 
 The Haiku extraction underwent one schema iteration during Phase 2. The initial schema (referred to as Haiku v1) was used to produce features for the first TFT training (Section 4.3.5) on the Phase 1 corpus of articles. It returned, for each article: a continuous sentiment_score in [-1, +1] measuring the article's net directional impact on the WTI price (−1 strongly bearish, +1 strongly bullish, assessed from the article's content rather than its headline tone), a magnitude score for event importance, a price_direction label, an event_type label, a list of entities, a certainty score, and a time_horizon label. The revised schema (referred to as Haiku v2) was introduced in response to an inter-model calibration finding documented in Section 4.3.4. It dropped the price_direction field, changed event_type from a single label to an array of one to three labels ordered by salience, introduced an explicit usable boolean for filtering (Section 3.4), and added three orthogonal economic channel scores (supply_impact, demand_impact, risk_premium) described in Section 3.3.4. The full Haiku v2 prompt and tool schema are reproduced in Appendix A.
 
 ### 3.3.3 Tool-use API and schema enforcement
 
-The Haiku extraction uses Anthropic's tool-use API [N] with `tool_choice` forcing the model to invoke a single `extract_article_features` tool. This is not a stylistic choice; it is a methodological one. Tool-use enforces the output schema at the API level, including enumerated values for categorical fields, type constraints on numeric fields, and required-field validation. An earlier extraction pass that relied on the LLM to produce valid JSON via prompt instruction alone produced frequent schema violations (e.g., the model returning `slightly_bullish` instead of a numeric score, or an out-of-range `time_horizon` label). Tool-use enforcement validates the numeric ranges and the scalar enumerated fields at the API boundary and removes almost all such failures. A negligible residue survives where the schema is permissive: the free-text `event_type` array received an off-list label on 16 of 11,433 articles (0.14%, `structural` or `political`), and one article carries a malformed `time_horizon` string; both are treated as noise downstream. The enforcement therefore eliminates the bulk of the parsing brittleness rather than every last case.
+The Haiku extraction uses Anthropic's tool-use API [CITE: Anthropic tool-use] with `tool_choice` forcing the model to invoke a single `extract_article_features` tool. This is not a stylistic choice; it is a methodological one. Tool-use enforces the output schema at the API level, including enumerated values for categorical fields, type constraints on numeric fields, and required-field validation. An earlier extraction pass that relied on the LLM to produce valid JSON via prompt instruction alone produced frequent schema violations (e.g., the model returning `slightly_bullish` instead of a numeric score, or an out-of-range `time_horizon` label). Tool-use enforcement validates the numeric ranges and the scalar enumerated fields at the API boundary and removes almost all such failures. A negligible residue survives where the schema is permissive: the free-text `event_type` array received an off-list label on 16 of 11,433 articles (0.14%, `structural` or `political`), and one article carries a malformed `time_horizon` string; both are treated as noise downstream. The enforcement therefore eliminates the bulk of the parsing brittleness rather than every last case.
 
 The tool-use design also enables a short-circuit optimisation. When the model determines that an article is unusable (a paywall block, a cookie notice, or off-topic content), only the `usable` field is required to be set; all other fields are optional. The model exploits this to return roughly 10 output tokens instead of 200 on unusable articles, reducing the cost of unusable-article extraction by roughly 90% at the per-article output level.
 
@@ -224,7 +224,7 @@ All regressions are estimated by ordinary least squares with the default standar
 
 ## 3.6 Temporal Fusion Transformer
 
-The Temporal Fusion Transformer (TFT) [N], introduced by Lim, Arık, Loeff, and Pfister, is a deep-learning architecture for multi-horizon time-series forecasting with mixed continuous and categorical inputs. We adopt the TFT as the primary deep-learning model for the Phase 2 work, training two successive instances (TFT v1 and TFT v2) that share the same architectural skeleton but differ in their feature configuration and training data. This section describes the architecture itself; the feature configurations for each instance are documented in Sections 4.3.5 and 4.3.7.
+The Temporal Fusion Transformer (TFT) [CITE: Lim et al. 2021], introduced by Lim, Arık, Loeff, and Pfister, is a deep-learning architecture for multi-horizon time-series forecasting with mixed continuous and categorical inputs. We adopt the TFT as the primary deep-learning model for the Phase 2 work, training two successive instances (TFT v1 and TFT v2) that share the same architectural skeleton but differ in their feature configuration and training data. This section describes the architecture itself; the feature configurations for each instance are documented in Sections 4.3.5 and 4.3.7.
 
 ### 3.6.1 Architecture overview
 
@@ -257,7 +257,7 @@ Both TFT instances condition each forecast on a fixed 48-hour encoder window, pr
 
 The forecast target and horizon differ between the two instances. TFT v1 (Section 4.3.5) predicts a single target, `log_volume`, one hour ahead. TFT v2 (Section 4.3.7) predicts three targets jointly, `log_volume`, `amihud`, and `price_range`, at four horizons (1, 3, 6, and 12 hours), so its prediction length is 12 hours and it emits a full trajectory rather than a single step; the +6 hour horizon is chosen to coincide with the lag OLS peak.
 
-Both instances are trained with a quantile loss [N], which produces point predictions at multiple quantiles in a single forward pass and is robust to target outliers without distributional assumptions. TFT v1 uses a single `QuantileLoss` on its one target; TFT v2 uses a `MultiLoss` that sums a `QuantileLoss` over each of the three targets. The median quantile serves as the point forecast throughout.
+Both instances are trained with a quantile loss, which produces point predictions at multiple quantiles in a single forward pass and is robust to target outliers without distributional assumptions. TFT v1 uses a single `QuantileLoss` on its one target; TFT v2 uses a `MultiLoss` that sums a `QuantileLoss` over each of the three targets. The median quantile serves as the point forecast throughout.
 
 ### 3.6.4 Architectural hyperparameters
 
@@ -272,7 +272,7 @@ Two things differ between the instances. The `dropout` rate was raised from `0.1
 
 ### 3.6.5 Training procedure
 
-Training is performed in PyTorch Lightning [N] via the `pytorch-forecasting` library [N]. Both instances share the same optimizer and regularization scaffolding: Adam with the learning rate above, gradient clipping at 0.1 to stabilize updates over long sequences, early stopping on validation loss with a minimum improvement of `1e-4`, and a Google Colab T4 GPU. Fixed-length sliding-window samples are built by the `pytorch-forecasting` `TimeSeriesDataSet` wrapper, which encodes categorical features consistently, constructs the input tensors, and applies group normalization; the held-out sets use the same wrapper with `stop_randomization=True` for deterministic evaluation.
+Training is performed in PyTorch Lightning [CITE: PyTorch Lightning] via the `pytorch-forecasting` library [CITE: pytorch-forecasting]. Both instances share the same optimizer and regularization scaffolding: Adam with the learning rate above, gradient clipping at 0.1 to stabilize updates over long sequences, early stopping on validation loss with a minimum improvement of `1e-4`, and a Google Colab T4 GPU. Fixed-length sliding-window samples are built by the `pytorch-forecasting` `TimeSeriesDataSet` wrapper, which encodes categorical features consistently, constructs the input tensors, and applies group normalization; the held-out sets use the same wrapper with `stop_randomization=True` for deterministic evaluation.
 
 Three training settings differ between the instances, reflecting their different scale:
 
