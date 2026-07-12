@@ -159,9 +159,9 @@ hidden_size, attention_head_size, hidden_continuous_size, dropout. Rationale for
 
 Adam optimizer, learning rate schedule, early stopping. Loss functions (QuantileLoss for v1, MultiLoss for v2). Split methodology, buffer windows to prevent leakage.
 
-### 3.6.6 Interpretation outputs
+### 3.6.6 Evaluation and interpretation outputs
 
-What the trained TFT produces beyond predictions: attention weights, feature importance from VSN, quantile predictions. How each is used for analysis.
+Persistence-relative MAE reduction as the headline metric (raw val_loss is not comparable across instances, per §4.3.8), evaluated per target/horizon/slice (val, test, pre-war, war). Interpretability: VSN feature importance and attention weights. Research-question diagnostics: attention for RQ1; a bearish-vs-bullish Welch t-test on predicted volume for RQ2 (a group-mean estimand, deliberately distinct from the lag OLS marginal coefficients).
 
 ## 3.7 Inter-model calibration methodology
 

@@ -366,6 +366,8 @@ The two feature-engineering choices behind this result, proper categorical encod
 
 The VSN reports a feature's weight, not the direction or magnitude of its effect, so this interpretation is qualitative: VIX informs volatility expectations, the channels capture fundamental-driven supply and demand news, and the entity flags carry source-specific risk signals. Sections 4.3.7.5 and 4.3.7.6 examine how the model turns these features into predictions, through its attention pattern and per-horizon error structure.
 
+**Stability of the ranking.** The specific ordering in Table 4.9 is not fully robust to retraining. An independent run, retrained after adding two candidate covariates and a minor data-cleaning fix, reshuffled the ranking substantially: `risk_premium` and `magnitude` rose to the top two positions while `supply_impact` and `ent_oman` fell out of it. What is stable across both runs is the character of the leading features rather than their exact order: risk and volatility proxies (VIX, `risk_premium`) and news-salience measures dominate in both, while the composite `sentiment_score` and the article count stay near the bottom. The importance results should therefore be read at the level of feature type, risk and salience over price direction (Section 4.3.7.6 and Chapter 5), rather than as a precise per-feature ranking.
+
 #### 4.3.7.5 Lag structure analysis: evidence for RQ1
 
 Research Question 1 asks at what temporal lag news events most strongly affect liquidity. Phase 1's lag OLS (Section 4.2.3) placed the bearish-news peak on log_volume at +6h, with a secondary trace at +12h. We test TFT v2 against this through two complementary diagnostics: the per-horizon error curve and the attention pattern.
