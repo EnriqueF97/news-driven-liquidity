@@ -11,6 +11,10 @@
 
 Structural reference for the thesis. The work investigates how news propagates into WTI crude oil futures liquidity at hourly resolution, using a channel decomposition of LLM-extracted news features (supply, demand, risk premium) to characterize the lag structure (RQ1) and the bearish/bullish asymmetry (RQ2) of the liquidity response.
 
+## Front matter - Glossary
+
+Plain-language glossary of finance, statistics, and machine-learning terms for non-specialist readers (`glossary.md`), placed before Chapter 1. ~45 alphabetical entries (e.g. contemporaneous, estimand, liquidity, bearish/bullish, Amihud, TFT, quantile). Status: Drafted. Can alternatively sit as an appendix if preferred.
+
 ## Chapter 1 - Introduction
 
 **Purpose:** What is the problem, current research questions, contributions.
