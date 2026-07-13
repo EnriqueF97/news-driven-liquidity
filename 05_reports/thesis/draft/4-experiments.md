@@ -123,7 +123,7 @@ Phase 2 addresses the Phase 1 limitations (§4.2.4) through a coordinated redesi
 
 ### 4.3.1 Phase 2 data and feature setup
 
-The Phase 2 corpus extends Phase 1 in two directions: the GDELT scrape runs through May 2026 to cover the post-war period, and five new queries target geopolitical and demand-side themes (Section 3.1). The full corpus is **22,795 article records** (January 2024 to May 2026); **19,619 have substantive body content** (non-null, not a scraping error) and go to LLM extraction, while 2,749 returned null bodies (paywall, fetch failure, JavaScript rendering).
+The Phase 2 corpus extends Phase 1 in two directions: the GDELT scrape runs through May 2026 to cover the post-war period, and five new queries target geopolitical and demand-side themes (Section 3.1). The full corpus is **22,795 article records** (January 2024 to May 2026); **19,619 have substantive body content** (non-null, not a scraping error) and go to LLM extraction, while 3,176 returned null bodies (paywall, fetch failure, JavaScript rendering).
 
 **Macro covariates.** DXY (`DX-Y.NYB`) and VIX (`^VIX`) hourly series were added as exogenous controls (Section 3.6.2). The rationale is empirical: the Phase 1 OLS explained under 0.3% of volume variance (§4.2.3), so macro controls let the model absorb broad market-driven variation and isolate a cleaner residual for news. The pipeline was also migrated from CSV intermediates to the SQLite database (`wti_thesis.db`), making the alignment a deterministic join.
 
@@ -137,7 +137,7 @@ The Phase 2 corpus extends Phase 1 in two directions: the GDELT scrape runs thro
 | After deduplication + English    | 16,326                                                                 | 22,795                                                                          |
 | Articles with substantive bodies | 7,756 (`body_valid=1`)                                                 | 19,619 (`body NOT NULL AND NOT 'ERROR%'`)                                       |
 | Title-only fallback              | 5,934                                                                  | 0 (no title-only fallback in Phase 2)                                           |
-| Modeling-ready corpus            | 13,690 (Phase 1 OLS/VAR)                                               | 11,433 (`usable_strict`, canonical for TFT v2) / 11,675 (`usable`)              |
+| Modeling-ready corpus            | 13,690 (Phase 1 OLS/VAR)                                               | 10,514 (`usable_strict`, canonical for TFT v2) / 11,675 (`usable`)              |
 | Market hours window              | March 2024 – February 2026                                             | May 2024 – May 2026                                                             |
 | Hourly market observations       | 11,219                                                                 | 11,232                                                                          |
 | Macro covariates                 | none                                                                   | DXY, VIX                                                                        |
@@ -180,9 +180,9 @@ The regex accepts 69.1% of articles and the LLM 59.5%; they agree on 75.2% (14,7
 
 **Manual audit.** Sampling both off-diagonal cells and hand-labelling confirms the LLM's judgment in the large majority of cases. The regex's false positives are dominated by keyword collisions (palm oil, canola, a semiconductor firm with an energy-sounding name, generic equity wraps); its false negatives are short but on-topic briefs (for example a 320-character note on OPEC+ holding its production plan). The audit also surfaced a residual LLM error mode: a few articles the LLM marks `usable` are not genuinely WTI-relevant (the clearest being an article on Canada rolling back EV tariffs), so the LLM filter is more accurate than the regex on both of the regex's failure modes but is not itself a ground-truth oracle, a limitation revisited in Chapter 5.
 
-**The `usable_strict` variant.** The residual LLM false positives share a diagnostic pattern: the article is marked `usable` yet all three channel scores are zero, meaning the LLM's own downstream reasoning judged no material market impact. Approximately **242** articles show this. We therefore define a stricter filter, `usable_strict=1`, requiring at least one non-zero channel; it is the canonical filter for TFT v2 training and the reported ablation (Appendix C), whereas `usable=1` is used only for this filter comparison. It reduces training noise without imposing external judgment.
+**The `usable_strict` variant.** The residual LLM false positives share a diagnostic pattern: the article is marked `usable` yet all three channel scores are zero, meaning the LLM's own downstream reasoning judged no material market impact. Approximately **1,161** articles show this (the 9.9% noted in §4.3.2). We therefore define a stricter filter, `usable_strict=1`, requiring at least one non-zero channel; it is the canonical filter for TFT v2 training and the reported ablation (Appendix C), whereas `usable=1` is used only for this filter comparison. It reduces training noise without imposing external judgment.
 
-**Filter choice and cross-phase note.** The two filters are not nested: the LLM accepts 1,491 articles the regex rejects and rejects 3,366 it accepts, so its acceptance set overlaps but is not a subset of the regex's. The LLM filter is the canonical Phase 2 downstream filter. This migration (plus the loss of Phase 1's title-only fallback) means the Phase 1 modeling set (13,690) and the Phase 2 set (11,675 usable / 11,433 strict) are not directly comparable, a point developed in §4.3.8.
+**Filter choice and cross-phase note.** The two filters are not nested: the LLM accepts 1,491 articles the regex rejects and rejects 3,366 it accepts, so its acceptance set overlaps but is not a subset of the regex's. The LLM filter is the canonical Phase 2 downstream filter. This migration (plus the loss of Phase 1's title-only fallback) means the Phase 1 modeling set (13,690) and the Phase 2 set (11,675 usable / 10,514 strict) are not directly comparable, a point developed in §4.3.8.
 
 ### 4.3.4 Inter-model calibration of LLM features
 
@@ -289,7 +289,7 @@ The evaluation is in §4.3.7.7.
 
 #### 4.3.7.2 Model design
 
-TFT v2 uses `hidden_size=32`, `attention_head_size=4`, `dropout=0.15`, `hidden_continuous_size=16` (298,329 parameters), trained on the `usable_strict=1` filter (§4.3.3, which drops ~242 channel-neutral articles labelled as `usable`). The input features are:
+TFT v2 uses `hidden_size=32`, `attention_head_size=4`, `dropout=0.15`, `hidden_continuous_size=16` (298,329 parameters), trained on the `usable_strict=1` filter (§4.3.3, which drops ~1,161 channel-neutral articles labelled as `usable`). The input features are:
 
 - **Channels (Phase 2 contribution):** `supply_impact`, `demand_impact`, `risk_premium`, each on `[-1, +1]`.
 - **Composite news:** `sentiment_score`, `magnitude`, `certainty`, `n_articles`.
@@ -433,9 +433,9 @@ The two phases approach the same research questions through structurally differe
 
 #### 4.3.8.1 What Phase 2 changed methodologically
 
-Phase 2 changed the analytical stack at four levels (corpus, feature extraction, entity normalization, and analytical framework), each motivated by a specific Phase 1 limitation.
+Phase 2 changed the analytical stack at five levels (corpus, feature extraction, tone versus price impact, entity normalization, and analytical framework), each motivated by a specific Phase 1 limitation.
 
-**Corpus expansion.** Phase 1's 13,690-article regex-filtered corpus (`body_valid`) covers the pre-war period to February 2026. Phase 2's LLM-filtered corpus (`usable_strict=1`, approximately 11,433 articles) extends through May 2026 to include the 28 February 2026 war onset and its aftermath; the `usable_strict` filter (§4.3.3) drops 242 topical-but-channel-neutral articles. The Phase 2 corpus is smaller in count but temporally more complete, covering the regime change Phase 1's data does not.
+**Corpus expansion.** Phase 1's 13,690-article regex-filtered corpus (`body_valid`) covers the pre-war period to February 2026. Phase 2's LLM-filtered corpus (`usable_strict=1`, approximately 10,514 articles) extends through May 2026 to include the 28 February 2026 war onset and its aftermath; the `usable_strict` filter (§4.3.3) drops 1,161 topical-but-channel-neutral articles. The Phase 2 corpus is smaller in count but temporally more complete, covering the regime change Phase 1's data does not.
 
 **Feature extraction.** Phase 1's FinBERT produces one three-class sentiment label per article (bearish, neutral, bullish), averaged hourly. Phase 2's LLM extracts a structured schema per article: a composite sentiment score, three channels (`supply_impact`, `demand_impact`, `risk_premium`), magnitude, certainty, event type, time horizon, and entities. The channels let the model separate supply, demand, and risk-premium news that FinBERT collapses onto a single axis.
 

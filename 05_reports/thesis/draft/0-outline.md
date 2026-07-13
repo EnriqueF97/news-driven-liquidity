@@ -25,7 +25,7 @@ Structural reference for the thesis. The work investigates how news propagates i
   - **RQ1**: lag structure of news impact on liquidity
   - **RQ2**: bearish vs bullish asymmetry in liquidity response
 - 1.4 Contributions
-  - (a) Empirical lag-and-asymmetry finding for WTI at hourly resolution, with peak news impact at lag +6h and a consistent bearish > bullish asymmetry. Supported by lag OLS results (4.2.3) and confirmed by TFT v2 attention patterns (4.3.7).
+  - (a) Empirical lag-and-asymmetry characterization for WTI at hourly resolution: peak news impact at lag +6 to +12h, recovered independently by lag OLS (4.2.3) and TFT v2 attention (4.3.7). On asymmetry the two phases estimate different quantities: lag OLS finds a larger marginal coefficient on negative than positive sentiment (4.2.3), while the TFT shows no bearish-vs-bullish gap in predicted volume and keys on risk/salience (VIX, risk_premium, supply-risk entities) rather than sentiment sign (4.3.7). The reframed finding is salience-and-risk over direction, not bearish > bullish.
   - (b) Methodological contribution: a decomposition of LLM-extracted news features into orthogonal economic channels (supply, demand, risk premium), validated by inter-model calibration. The decomposition improves cross-model agreement on news sentiment by roughly 50 percentage points relative to a single composite score. Supported by 4.3.2–4.3.5.
   - (c) Comparative finding on news content representation: title-only and full-body sentiment extraction disagree on 41.6% of articles, with systematic asymmetry. Supported by 4.2.2.
 - 1.5 Structure of the thesis
@@ -65,7 +65,7 @@ Weekly EIA inventory reports as fundamental context. Wednesday releases and thei
 
 ### 3.1.4 News data
 
-GDELT for headline scraping. Article body scraping methodology (BeautifulSoup). Corpus sizes: 13,690 (Phase 1) → ~11,433 (Phase 2 with usable_strict).
+GDELT for headline scraping. Article body scraping methodology (BeautifulSoup). Corpus sizes: 13,690 (Phase 1) → ~10,514 (Phase 2 with usable_strict).
 
 ### 3.1.5 Persistence
 
@@ -323,12 +323,12 @@ Appendices are a top-level section following Chapter 6 (Conclusion), drafted in 
 
 | ID  | Title                               | Scope                                                                                             | Status                     | First referenced |
 | --- | ----------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------- | ---------------- |
-| A   | Extraction prompt                   | Verbatim Haiku v2 system prompt and the `extract_article_features` tool schema                    | Drafted (prompt to insert) | §3.3.2           |
+| A   | Extraction prompt                   | Verbatim Haiku v2 system prompt, `extract_article_features` tool schema, and request config       | Drafted                    | §3.3.2           |
 | B   | LLM extraction schema (v1 vs v2)    | Field-by-field Schema v1 vs v2 comparison and the rationale for each change                       | Drafted                    | §3.3.2           |
 | C   | TFT v2 ablation and hyperparameters | Three-variant ablation (v2.0/v2.1/v2.2) with val_loss, test MAE@1h, top feature; canonical config | Drafted                    | §4.3.3           |
 | D   | Canonical entity list               | The 71 canonical entities (from `03_src/nlp/llm_features.py`); alias mappings to add              | Drafted                    | §4.3.7.4         |
-| E   | Inter-model calibration comparison  | Article-by-article Haiku vs GPT scores on the 30-article calibration sample                       | Not started                | §4.3.4           |
-| F   | Extended metrics tables             | Full TFT v2 metrics (3 targets × 4 horizons × 4 slices), MAE and RMSE                             | Not started                | §4.3.7.3         |
+| E   | Inter-model calibration comparison  | Article-by-article Haiku vs GPT scores on the 30-article calibration sample                       | Drafted                    | §4.3.4           |
+| F   | Extended metrics tables             | Full TFT v2 metrics (3 targets × 4 horizons × 3 slices), MAE and RMSE                             | Drafted                    | §4.3.7.3         |
 | G   | Reproducibility statement           | Software libraries and versions, models/APIs, data sources (GDELT/EIA/yfinance), hardware, seed 42 | Drafted                    | §3.1, §4.3.7     |
 
 Optional extras (add if space allows): a sample of LLM-rejected articles illustrating the body_valid-vs-usable disagreement (§4.3.3); the full per-lag OLS regression tables with confidence intervals (§4.2.3).
