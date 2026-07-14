@@ -1,0 +1,126 @@
+\begin{thebibliography}{18}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Amihud(2002)]{amihud2002}
+Yakov Amihud.
+\newblock Illiquidity and stock returns: cross-section and time-series effects.
+\newblock \emph{Journal of Financial Markets}, 5\penalty0 (1):\penalty0 31--56,
+  2002.
+
+\bibitem[{Anthropic}(2025{\natexlab{a}})]{anthropic_claude}
+{Anthropic}.
+\newblock {Claude Haiku 4.5}.
+\newblock \url{https://www.anthropic.com/claude}, 2025{\natexlab{a}}.
+
+\bibitem[{Anthropic}(2025{\natexlab{b}})]{anthropic_tooluse}
+{Anthropic}.
+\newblock Tool use with the {Claude} {API}.
+\newblock \url{https://docs.anthropic.com/en/docs/build-with-claude/tool-use},
+  2025{\natexlab{b}}.
+
+\bibitem[Araci(2019)]{araci2019}
+Dogu Araci.
+\newblock Finbert: Financial sentiment analysis with pre-trained language
+  models.
+\newblock \emph{arXiv preprint arXiv:1908.10063}, 2019.
+
+\bibitem[Aroussi(2024)]{yfinance}
+Ran Aroussi.
+\newblock {yfinance}: {Yahoo!} {Finance} market data downloader.
+\newblock \url{https://github.com/ranaroussi/yfinance}, 2024.
+
+\bibitem[Beitner(2024)]{pytorch_forecasting}
+Jan Beitner.
+\newblock {PyTorch Forecasting}.
+\newblock \url{https://pytorch-forecasting.readthedocs.io}, 2024.
+
+\bibitem[Ederington and Lee(1993)]{ederington1993}
+Louis~H. Ederington and Jae~Ha Lee.
+\newblock How markets process information: News releases and volatility.
+\newblock \emph{The Journal of Finance}, 48\penalty0 (4):\penalty0 1161--1191,
+  1993.
+\newblock \doi{10.1111/j.1540-6261.1993.tb04750.x}.
+
+\bibitem[Falcon and {The PyTorch Lightning team}(2024)]{pytorch_lightning}
+William Falcon and {The PyTorch Lightning team}.
+\newblock {PyTorch Lightning}.
+\newblock \url{https://www.lightning.ai/}, 2024.
+
+\bibitem[Gilardi et~al.(2023)Gilardi, Alizadeh, and Kubli]{gilardi2023}
+Fabrizio Gilardi, Meysam Alizadeh, and Ma{\"e}l Kubli.
+\newblock Chatgpt outperforms crowd workers for text-annotation tasks.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 120\penalty0
+  (30):\penalty0 e2305016120, 2023.
+\newblock \doi{10.1073/pnas.2305016120}.
+
+\bibitem[Kilian(2009)]{kilian2009}
+Lutz Kilian.
+\newblock Not all oil price shocks are alike: Disentangling demand and supply
+  shocks in the crude oil market.
+\newblock \emph{American Economic Review}, 99\penalty0 (3):\penalty0
+  1053--1069, 2009.
+
+\bibitem[Kilian and Vega(2011)]{kilian_vega2011}
+Lutz Kilian and Clara Vega.
+\newblock Do energy prices respond to u.s. macroeconomic news? a test of the
+  hypothesis of predetermined energy prices.
+\newblock \emph{The Review of Economics and Statistics}, 93\penalty0
+  (2):\penalty0 660--671, 2011.
+
+\bibitem[Leetaru and Schrodt(2013)]{leetaru_schrodt2013}
+Kalev Leetaru and Philip~A. Schrodt.
+\newblock {GDELT}: Global data on events, location, and tone, 1979--2012.
+\newblock In \emph{ISA Annual Convention}, 2013.
+
+\bibitem[Lim et~al.(2021)Lim, Ar{\i}k, Loeff, and Pfister]{lim2021}
+Bryan Lim, Sercan~{\"O}. Ar{\i}k, Nicolas Loeff, and Tomas Pfister.
+\newblock Temporal fusion transformers for interpretable multi-horizon time
+  series forecasting.
+\newblock \emph{International Journal of Forecasting}, 37\penalty0
+  (4):\penalty0 1748--1764, 2021.
+\newblock \doi{10.1016/j.ijforecast.2021.03.012}.
+
+\bibitem[Parkinson(1980)]{parkinson1980}
+Michael Parkinson.
+\newblock The extreme value method for estimating the variance of the rate of
+  return.
+\newblock \emph{The Journal of Business}, 53\penalty0 (1):\penalty0 61--65,
+  1980.
+
+\bibitem[Tetlock(2007)]{tetlock2007}
+Paul~C. Tetlock.
+\newblock Giving content to investor sentiment: The role of media in the stock
+  market.
+\newblock \emph{The Journal of Finance}, 62\penalty0 (3):\penalty0 1139--1168,
+  2007.
+\newblock \doi{10.1111/j.1540-6261.2007.01232.x}.
+
+\bibitem[{U.S. Energy Information Administration}(2024)]{eia}
+{U.S. Energy Information Administration}.
+\newblock {EIA} open data {API} v2.
+\newblock \url{https://www.eia.gov/opendata/}, 2024.
+
+\bibitem[Wolf et~al.(2020)Wolf, Debut, Sanh, Chaumond, Delangue, Moi, Cistac,
+  Rault, Louf, Funtowicz, et~al.]{wolf2020}
+Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Clement Delangue,
+  Anthony Moi, Pierric Cistac, Tim Rault, R{\'e}mi Louf, Morgan Funtowicz,
+  et~al.
+\newblock Transformers: State-of-the-art natural language processing.
+\newblock In \emph{Proceedings of the 2020 Conference on Empirical Methods in
+  Natural Language Processing: System Demonstrations}, pages 38--45, 2020.
+\newblock \doi{10.18653/v1/2020.emnlp-demos.6}.
+
+\bibitem[Zheng et~al.(2023)Zheng, Chiang, Sheng, Zhuang, Wu, Zhuang, Lin, Li,
+  Li, Xing, Zhang, Gonzalez, and Stoica]{zheng2023}
+Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao
+  Zhuang, Zi~Lin, Zhuohan Li, Dacheng Li, Eric~P. Xing, Hao Zhang, Joseph~E.
+  Gonzalez, and Ion Stoica.
+\newblock Judging llm-as-a-judge with mt-bench and chatbot arena.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, volume~36, pages 46595--46623, 2023.
+
+\end{thebibliography}

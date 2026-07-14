@@ -48,3 +48,6 @@ __pycache__/
 **/*.npz
 
 .vscode
+
+# Presentation
+/05_reports/presentation*

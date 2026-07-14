@@ -7,11 +7,16 @@
 % Page layout
 \usepackage[margin=2.5cm]{geometry}
 
+% Number subsubsections (e.g. 4.3.7.1) and show them in the ToC
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
 % Typography
 \usepackage{microtype}         % better text justification
 \usepackage{parskip}           % space between paragraphs instead of indent
 \usepackage{setspace}          % line spacing control
 \onehalfspacing
+\setlength{\emergencystretch}{3em}  % absorb occasional long \texttt / URL lines
 
 % Font: Latin Modern (Overleaf default feel)
 \usepackage{lmodern}
@@ -44,9 +49,11 @@
 
 % Tables
 \usepackage{booktabs}
+\usepackage{longtable}
 
 % Figures
 \usepackage{graphicx}
+\graphicspath{{figures/}}
 \usepackage{caption}
 \usepackage{subcaption}
 \captionsetup{font=small, labelfont=bf}
@@ -81,6 +88,18 @@ Propagation in Commodities Markets}}
 \maketitle
 \tableofcontents
 
+\input{sections/glossary}
+
 \input{sections/1}
+\input{sections/2}
+\input{sections/3}
+\input{sections/4}
+\input{sections/5}
+\input{sections/6}
+
+\input{sections/appendices}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
 
 \end{document}

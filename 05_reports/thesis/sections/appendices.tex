@@ -1,0 +1,370 @@
+\appendix
+
+\chapter{Extraction prompt}\label{app:prompt}
+
+This appendix reproduces the Haiku v2 extraction interface: the system prompt, the \texttt{extract\_article\_features} tool schema passed to the tool-use API, and the request configuration. The conceptual field-level schema and its revision history are in Appendix~\ref{app:schema}. The source of record is \texttt{03\_src/nlp/llm\_features.py}. Dashes in the reproduced prompt are normalised to ASCII for typesetting.
+
+\textbf{A.1 System prompt.} The following text is passed as the cached system prompt.
+
+\begin{lstlisting}
+You are a financial analyst specializing in WTI crude oil markets. Your task is to analyze news articles and extract structured features for use in a quantitative liquidity impact model.
+
+First, determine whether the article contains substantive WTI-relevant content (usable=true). Set usable=false -- and return only that field -- for: paywall placeholders, Cloudflare blocks, cookie notices, or articles that are clearly not about oil markets, macro, or geopolitics relevant to oil.
+
+When usable=true, extract the remaining fields:
+- sentiment_score: NET directional impact on WTI price. -1.0 = strongly bearish, +1.0 = strongly bullish. Assess the actual content, not the headline tone.
+- supply_impact: Direction of impact on WTI supply. Score the article's implication for the quantity of oil available to the market.
+  +1.0 = strong supply increase (OPEC adds barrels, sanctions lifted on a major producer, new pipeline online, Venezuela ramping up).
+  +0.5 = moderate supply increase (single-country production gains, inventory builds).
+  0.0 = no supply implication.
+  -0.5 = moderate supply decrease (refinery outages, minor OPEC cuts).
+  -1.0 = strong supply decrease (major OPEC cuts, infrastructure attacks, embargoes, refinery fires affecting multiple facilities).
+- demand_impact: Direction of impact on WTI demand. Score the article's implication for oil consumption.
+  +1.0 = strong demand increase (China stimulus, Fed pivot to easing, growth surprise, summer driving acceleration).
+  +0.5 = moderate demand increase (regional growth indicators).
+  0.0 = no demand implication.
+  -0.5 = moderate demand decrease (mild slowdown signals).
+  -1.0 = strong demand decrease (recession confirmed, Fed strongly hawkish, major economy lockdowns, demand destruction events).
+- risk_premium: Change in geopolitical or operational risk premium for oil. Score the direction of risk change, not the absolute level.
+  +1.0 = major escalation (military strike on oil infrastructure, war, Strait of Hormuz incident, major sanctions imposed).
+  +0.5 = moderate escalation (rising tensions, threats, troop movements).
+  0.0 = no change in risk environment.
+  -0.5 = moderate de-escalation (talks resuming, partial sanctions lifted).
+  -1.0 = major de-escalation (ceasefire signed, diplomatic breakthrough, full sanctions removal).
+- magnitude: how market-moving is this event. 0.0 = negligible, 1.0 = historic. Most articles score 0.1-0.4. Major OPEC cut = 0.9. Geopolitical crisis = 1.0.
+- event_type: 1-3 categories ordered by salience from: geopolitical, supply, demand, macro, technical, other. EIA inventory articles classify as supply or macro -- do not use "inventory".
+- entities: specific named actors central to the article (not incidentally mentioned). Include countries, organizations, oil companies, and key officials. Use the names exactly as they appear in the article.
+- certainty: how confirmed is the information. 0.0 = rumor, 0.5 = analyst forecast, 0.9 = official announcement.
+- time_horizon: immediate (hours to 1 day), short_term (days to weeks), or structural (months-plus or permanent themes such as energy transition).
+
+The three impact fields (supply_impact, demand_impact, risk_premium) are intentionally orthogonal. An article can affect multiple channels independently. Score each based on what the article actually says about that specific channel. If the article has no clear implication for a channel, score it 0.0.
+\end{lstlisting}
+
+\textbf{A.2 Tool schema.} The model is forced to call a single tool, \texttt{extract\_article\_features}, whose \texttt{input\_schema} is reproduced below. Only \texttt{usable} is required; every other field is omitted when \texttt{usable=false}.
+
+\begin{lstlisting}
+{
+  "name": "extract_article_features",
+  "description": "Extract structured WTI-relevant features from a news article
+                  for use in a quantitative liquidity impact model.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "usable":         { "type": "boolean" },
+      "sentiment_score":{ "type": "number" },
+      "supply_impact":  { "type": "number", "minimum": -1.0, "maximum": 1.0 },
+      "demand_impact":  { "type": "number", "minimum": -1.0, "maximum": 1.0 },
+      "risk_premium":   { "type": "number", "minimum": -1.0, "maximum": 1.0 },
+      "magnitude":      { "type": "number" },
+      "event_type":     { "type": "array",
+                          "items": { "type": "string",
+                            "enum": ["geopolitical","supply","demand",
+                                     "macro","technical","other"] },
+                          "minItems": 1, "maxItems": 3 },
+      "entities":       { "type": "array", "items": { "type": "string" } },
+      "certainty":      { "type": "number" },
+      "time_horizon":   { "type": "string",
+                          "enum": ["immediate","short_term","structural"] }
+    },
+    "required": ["usable"]
+  }
+}
+\end{lstlisting}
+
+Each numeric field carries a per-field \texttt{description} in the live schema that restates the scoring anchors of the system prompt; those are elided here for brevity and are recoverable from the source file. Note that \texttt{time\_horizon} is a single categorical label, not an array (only \texttt{event\_type} is multi-valued).
+
+\textbf{A.3 Request configuration.} Requests are submitted through the Anthropic Batches API, one request per article, with the following parameters:
+
+\begin{itemize}
+  \item \texttt{model}: \texttt{claude-haiku-4-5}
+  \item \texttt{max\_tokens}: 500
+  \item \texttt{system}: the A.1 prompt, sent with \texttt{cache\_control} ephemeral so the prompt is cached across the batch
+  \item \texttt{tools}: the A.2 tool; \texttt{tool\_choice} set to force \texttt{extract\_article\_features}
+  \item user message: the title and body, where the body is UTF-8 sanitised and truncated to the first 1{,}500 characters (title only when no body was retrieved)
+\end{itemize}
+
+\chapter{LLM extraction schema (v1 vs v2)}\label{app:schema}
+
+The Haiku extraction schema was revised once during Phase~2, from Schema v1 (used for TFT v1, Section~\ref{sec:tft-v1}) to Schema v2 (the canonical extraction used for all reported Phase~2 results, Section~\ref{sec:channel-response}). The revision was the direct response to the inter-model calibration finding of Section~\ref{sec:calibration}: the composite \texttt{sentiment\_score} was unreliable on high-magnitude geopolitical events because it conflated event valence with directional price impact.
+
+\textbf{Field-by-field comparison.}
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{Schema v1 versus v2, field by field.}
+  \label{tab:schema-comparison}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    Field & Schema v1 & Schema v2 \\
+    \midrule
+    \texttt{sentiment\_score} & continuous $[-1, +1]$ & continuous $[-1, +1]$ (retained) \\
+    \texttt{supply\_impact} & n/a & continuous $[-1, +1]$ (new) \\
+    \texttt{demand\_impact} & n/a & continuous $[-1, +1]$ (new) \\
+    \texttt{risk\_premium} & n/a & continuous $[-1, +1]$ (new) \\
+    \texttt{magnitude} & $[0, 1]$ & $[0, 1]$ \\
+    \texttt{certainty} & $[0, 1]$ & $[0, 1]$ \\
+    \texttt{event\_type} & single categorical label & array of one to three labels \\
+    \texttt{time\_horizon} & categorical label & categorical label \\
+    \texttt{price\_direction} & categorical label & dropped \\
+    \texttt{entities} & list of canonical actors & list of canonical actors \\
+    \texttt{usable} & implicit (prompt only) & required boolean field \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Changes and rationale.}
+
+\begin{enumerate}
+  \item \textbf{Three orthogonal economic channels added} (\texttt{supply\_impact}, \texttt{demand\_impact}, \texttt{risk\_premium}, each on $[-1, +1]$). This decomposes the single sentiment judgment into its separable economic drivers, mirroring the standard structural decomposition of oil-price shocks into supply, aggregate-demand, and precautionary (risk) components \citep{kilian2009}. Re-calibration lifted the composite \texttt{sentiment\_score} cross-model correlation from 0.39 to 0.88 and gave the channels correlations of 0.94 (supply), 0.96 (demand), and 0.82 (risk) (Section~\ref{sec:channel-response}).
+  \item \textbf{\texttt{usable} promoted to a required field} (from an implicit prompt instruction), enabling the LLM-based filter and the derived \texttt{usable\_strict} variant (Section~\ref{sec:filter-comparison}).
+  \item \textbf{\texttt{event\_type} changed from a single label to an array of one to three salience-ordered labels}, so an article that is jointly geopolitical and supply-related (e.g.\ Iran sanctions) need not be forced into a single category.
+  \item \textbf{\texttt{price\_direction} dropped}: it agreed with the sign of \texttt{sentiment\_score} on all but roughly 16 of 12{,}024 articles and carried about 0.008 feature importance in TFT v1, and the three channels provide a richer directional substrate.
+  \item \textbf{\texttt{sentiment\_score} retained} (not replaced by the channels), for continuity with the headline-bias experiment (Section~\ref{sec:headline-bias}) and as a hedge against individually noisy channels.
+\end{enumerate}
+
+TFT v1 (Section~\ref{sec:tft-v1}) was trained on Schema v1; TFT v2 (Section~\ref{sec:tft-v2}) and all reported Phase~2 results use Schema v2.
+
+\chapter{TFT v2 ablation and hyperparameters}\label{app:ablation}
+
+The reported TFT v2 (variant v2.2) was selected through a three-variant ablation, all on the 60/20/20 split with \texttt{usable\_strict=1}, dropout 0.15, and early-stopping patience 10; only the design axis changes between rows.
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{Three-variant TFT v2 ablation.}
+  \label{tab:ablation}
+  \begin{tabular}{@{}llllrrl@{}}
+    \toprule
+    Variant & Categorical encoding & Targets $\times$ horizons & Entity flags & Val loss & MAE@1h & Feature \#1 \\
+    \midrule
+    v2.0 & int-encoded & log\_volume $\times$ 1h & no & 0.257 & 0.455 & sentiment\_score 0.274 \\
+    v2.1 & proper categoricals & log\_volume $\times$ 1h & no & 0.258 & 0.424 & demand\_impact 0.485 \\
+    v2.2 (canonical) & proper categoricals & 3 $\times$ [1, 3, 6, 12] & 71 & 0.427* & 0.585 & vix 0.188 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\noindent* v2.2's val\_loss (\texttt{MultiLoss} over three targets) is not comparable to the single-target v2.0/v2.1. The key finding is that proper categorical encoding (v2.0 to v2.1) is what unlocks the channels' predictive role: \texttt{demand\_impact} jumps to 0.485. The full per-run record is in \texttt{05\_reports/v2\_training\_results.md}.
+
+\textbf{Canonical TFT v2 hyperparameters.} Hidden size 32, attention head size 4, hidden-continuous size 16, dropout 0.15, learning rate 1e-3 (Adam, on-plateau patience 3), gradient clip 0.1, early-stopping patience 10, seed 42; 298{,}329 trainable parameters; encoder length 48h; targets \texttt{[log\_volume, amihud, price\_range]}; horizons \texttt{[1, 3, 6, 12]}; split 60/20/20 (TRAIN\_END 6739, VAL 6787--9014, TEST 9062--11232).
+
+\chapter{Canonical entity list}\label{app:entities}
+
+The 71 canonical entities used as TFT v2 entity flags (from \texttt{03\_src/nlp/llm\_features.py}), each mapped from raw article mentions via the normalization of Section~\ref{sec:llm-extraction} (alias mappings omitted here for brevity):
+
+\medskip
+\noindent US, Iran, Russia, China, Israel, India, Saudi Arabia, Ukraine, Venezuela, Canada, Iraq, Nigeria, UAE, Kazakhstan, Qatar, Oman, Japan, Kuwait, Pakistan, Libya, Mexico, Azerbaijan, Yemen, Lebanon, Brazil, South Korea, Guyana, UK, Algeria, Germany, Australia, Hungary, Egypt, T\"urkiye, Strait of Hormuz, Middle East, Gaza, Red Sea, Persian Gulf, Gulf of Mexico, Permian Basin, Europe, Asia, Trump, Maduro, Putin, Powell, Bessent, Biden, OPEC+, OPEC, Fed, EU, EIA, IEA, API, ECB, Hamas, Hezbollah, Houthis, Saudi Aramco, Chevron, Shell, BP, ExxonMobil, Rosneft, Lukoil, TotalEnergies, WTI, Brent, S\&P 500.
+
+\chapter{Inter-model calibration comparison}\label{app:calibration}
+
+This appendix gives the article-by-article record behind the inter-model calibration of Sections~\ref{sec:calibration-methods} and~\ref{sec:calibration}. The same 30-article stratified sample was scored independently by Claude Haiku 4.5 (the extraction model, denoted H) and by GPT-5.5 (an independent reference from a different model family, accessed through the ChatGPT interface, denoted G), using the identical Schema v2 prompt and tool of Appendix~\ref{app:prompt}. Two independently trained models agreeing is a defensible, if weaker than human, validation signal; disagreement flags genuine ambiguity in the article.
+
+\textbf{Aggregate agreement (Schema v2).} The two models agree on the binary \texttt{usable} flag for 27 of 30 articles; the three disagreements (IDs 13331, 10308, 10211) are borderline single-company or forecast pieces that Haiku filtered out and GPT retained. On the 14 articles both models judged usable, the composite \texttt{sentiment\_score} reaches a Pearson correlation of 0.88, with a single sign disagreement (1/14, using a 0.1 neutral band, so only scores with magnitude above 0.1 count as directional). The three channels reach Pearson correlations of 0.94 (supply), 0.96 (demand), and 0.82 (risk). For contrast, Schema v1, which scored only the composite, gave a sentiment correlation of 0.39 with 4 sign disagreements out of 13; the channel decomposition of Schema v2 is what lifted agreement (Section~\ref{sec:channel-response}).
+
+\textbf{Usability and composite sentiment (all 30 articles).}
+
+\begin{footnotesize}
+\begin{longtable}{@{}rp{6.6cm}ccrr@{}}
+  \caption{Per-article usability and composite sentiment, Haiku (H) versus GPT (G).}
+  \label{tab:calibration-main}\\
+  \toprule
+  ID & Title & Us.\ H & Us.\ G & Sent.\ H & Sent.\ G \\
+  \midrule
+  \endfirsthead
+  \multicolumn{6}{@{}l}{\emph{Table~\thetable\ (continued)}}\\
+  \toprule
+  ID & Title & Us.\ H & Us.\ G & Sent.\ H & Sent.\ G \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+  11630 & Top Stock Movers Now: Vertex, DoorDash, Con\ldots & $\times$ & $\times$ & & \\
+  16558 & Oil prices fall as analysts forecast an increa\ldots & $\checkmark$ & $\checkmark$ & -0.60 & -0.68 \\
+  18615 & WTI Forecast: Retreats from 7-month top, h\ldots & $\checkmark$ & $\checkmark$ & +0.70 & +0.74 \\
+  13331 & Crude Oil Weekly Forecast 10/08: Tempting S\ldots & $\times$ & $\checkmark$ & & -0.42 \\
+  13772 & Focus on Nigeria Non-oil Revenue Potential & $\times$ & $\times$ & & \\
+  4108 & Oil up on Opec+ meeting, summer driving seaso\ldots & $\checkmark$ & $\checkmark$ & +0.60 & +0.81 \\
+  8677 & Top 5 things to watch in markets in the week a\ldots & $\checkmark$ & $\checkmark$ & +0.00 & -0.16 \\
+  3151 & Oil recovers after surprise drawdown in US sto\ldots & $\checkmark$ & $\checkmark$ & +0.30 & +0.37 \\
+  3779 & Global supply chains now in Goldilocks Zone\ldots & $\checkmark$ & $\checkmark$ & +0.40 & +0.21 \\
+  6068 & Oil climbs with U.S. Federal Reserve pivot & $\checkmark$ & $\checkmark$ & +0.60 & +0.58 \\
+  3335 & Gran Tierra Energy Inc. Announces First Quart\ldots & $\checkmark$ & $\checkmark$ & +0.30 & -0.06 \\
+  10308 & Vermilion Energy Inc. Announces Results for t\ldots & $\times$ & $\checkmark$ & & -0.02 \\
+  7834 & Is Occidental Petroleum Corporation (OXY) th\ldots & $\checkmark$ & $\checkmark$ & +0.20 & +0.17 \\
+  7188 & ALPS Advisors Inc. Expands Stake in EnLink Mi\ldots & $\times$ & $\times$ & & \\
+  10989 & Why Occidental Petroleum Stock Plunged 10\% To\ldots & $\checkmark$ & $\checkmark$ & -0.30 & +0.09 \\
+  10799 & Is Atmos Energy Corp. (ATO) The Best Defens\ldots & $\times$ & $\times$ & & \\
+  13211 & Baytex Energy Corp.: Baytex Delivers Solid Se\ldots & $\checkmark$ & $\checkmark$ & +0.30 & -0.12 \\
+  20149 & Why Halliburton (HAL) Stock Is Trading Up To\ldots & $\checkmark$ & $\checkmark$ & +0.70 & +0.86 \\
+  10211 & Is Chevron Corporation (CVX) The Best Crude\ldots & $\times$ & $\checkmark$ & & -0.35 \\
+  6161 & 1 Growth Stock Down 18\% to Buy Right Now & $\times$ & $\times$ & & \\
+  8882 & Petroleum prices increase ahead of Christmas & $\times$ & $\times$ & & \\
+  6160 & Stock market today: US stocks slip as traders\ldots & $\times$ & $\times$ & & \\
+  13217 & The Latest: Market slumps, Gaza bloodbath an\ldots & $\times$ & $\times$ & & \\
+  11929 & Oil Prices Rise Amid US-China Trade Optimism\ldots & $\times$ & $\times$ & & \\
+  16355 & Iran Warns US Intervention Would Destabilize R\ldots & $\checkmark$ & $\checkmark$ & +0.30 & +0.25 \\
+  21358 & How China built an energy fortres to survive o\ldots & $\times$ & $\times$ & & \\
+  21692 & Global oil prices surge above \$111 per barrel\ldots & $\checkmark$ & $\checkmark$ & +0.70 & +0.85 \\
+  1636 & Gasoline Market 2024-2032: Industry Report\ldots & $\times$ & $\times$ & & \\
+  19074 & Governments Move to Shield Economies as Oil Ju\ldots & $\times$ & $\times$ & & \\
+  18 & Oil jumps 1\% in New Year after US forces repe\ldots & $\times$ & $\times$ & & \\
+\end{longtable}
+\end{footnotesize}
+
+\textbf{Channel scores (14 articles both models judged usable).}
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{Per-article channel scores on the both-usable articles, H versus G.}
+  \label{tab:calibration-channels}
+  \begin{tabular}{@{}rrrrrrr@{}}
+    \toprule
+    ID & Supply H & Supply G & Demand H & Demand G & Risk H & Risk G \\
+    \midrule
+    16558 & +0.70 & +0.72 & -0.40 & -0.34 & -0.30 & +0.18 \\
+    18615 & +0.00 & -0.12 & +0.00 & +0.00 & +0.60 & +0.78 \\
+    4108 & -0.50 & -0.72 & +0.50 & +0.48 & +0.00 & +0.00 \\
+    8677 & +0.00 & +0.00 & +0.00 & -0.22 & +0.00 & +0.08 \\
+    3151 & -0.50 & -0.44 & +0.00 & -0.12 & +0.00 & +0.00 \\
+    3779 & +0.00 & +0.00 & +0.50 & +0.34 & +0.00 & +0.00 \\
+    6068 & +0.00 & -0.08 & +0.70 & +0.52 & +0.00 & +0.00 \\
+    3335 & +0.40 & +0.29 & +0.00 & +0.00 & +0.00 & +0.00 \\
+    7834 & +0.00 & -0.12 & +0.00 & +0.00 & +0.00 & +0.44 \\
+    10989 & +0.00 & +0.06 & +0.00 & +0.00 & +0.00 & +0.00 \\
+    13211 & +0.40 & +0.33 & +0.00 & +0.00 & +0.00 & +0.00 \\
+    20149 & +0.00 & -0.48 & +0.00 & +0.00 & +0.50 & +0.91 \\
+    16355 & +0.00 & +0.00 & +0.00 & +0.00 & +0.50 & +0.45 \\
+    21692 & -0.60 & -0.75 & +0.00 & +0.00 & +0.40 & +0.60 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The residual disagreement concentrates in the risk channel ($r = 0.82$, the lowest of the three): on IDs 16558, 20149, and 7834 the two models weight the geopolitical or operational risk implication quite differently, whereas supply and demand track closely. This is consistent with risk being the hardest channel to score, noted in Section~\ref{sec:channel-response}.
+
+\chapter{Extended metrics tables}\label{app:metrics}
+
+This appendix reports the full TFT v2 test-set metrics summarised in Section~\ref{sec:predictive-performance}. For each of the three targets it gives mean absolute error (MAE) and root mean squared error (RMSE) at each forecast horizon against the persistence baseline ($\hat{y}_{t+k} = y_t$, the last observed value carried forward), broken out by the full test set and by the pre-war and war regimes (split at the war onset, decoder time index 10056). ``Reduction'' is the percentage by which the TFT lowers MAE relative to persistence; a positive value means the model beats persistence. The test set has 2{,}159 forecast origins; the pre-war and war row counts differ slightly across horizons because a fixed origin's $+k$-step target crosses the war boundary at different $k$.
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{\texttt{log\_volume} extended metrics.}
+  \label{tab:metrics-logvolume}
+  \begin{tabular}{@{}rlrrrrrr@{}}
+    \toprule
+    Horizon & Slice & $n$ & TFT MAE & Persist.\ MAE & Reduction & TFT RMSE & Persist.\ RMSE \\
+    \midrule
+    +1h & overall & 2159 & 0.585 & 1.076 & +46\% & 0.915 & 2.334 \\
+    +1h & pre-war & 994 & 0.536 & 1.075 & +50\% & 0.863 & 2.233 \\
+    +1h & war & 1165 & 0.628 & 1.076 & +42\% & 0.957 & 2.417 \\
+    +3h & overall & 2159 & 0.577 & 1.452 & +60\% & 0.895 & 2.734 \\
+    +3h & pre-war & 992 & 0.532 & 1.480 & +64\% & 0.855 & 2.664 \\
+    +3h & war & 1167 & 0.614 & 1.428 & +57\% & 0.928 & 2.793 \\
+    +6h & overall & 2159 & 0.602 & 1.820 & +67\% & 0.932 & 2.838 \\
+    +6h & pre-war & 989 & 0.543 & 1.935 & +72\% & 0.865 & 2.841 \\
+    +6h & war & 1170 & 0.652 & 1.724 & +62\% & 0.985 & 2.835 \\
+    +12h & overall & 2159 & 0.631 & 2.174 & +71\% & 0.958 & 3.062 \\
+    +12h & pre-war & 983 & 0.555 & 2.319 & +76\% & 0.874 & 3.111 \\
+    +12h & war & 1176 & 0.695 & 2.053 & +66\% & 1.024 & 3.021 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{\texttt{amihud} extended metrics (MAE and RMSE in units of $10^{-3}$).}
+  \label{tab:metrics-amihud}
+  \begin{tabular}{@{}rlrrrrrr@{}}
+    \toprule
+    Horizon & Slice & $n$ & TFT MAE & Persist.\ MAE & Reduction & TFT RMSE & Persist.\ RMSE \\
+    \midrule
+    +1h & overall & 2159 & 0.23 & 0.41 & +42\% & 2.73 & 3.86 \\
+    +1h & pre-war & 994 & 0.10 & 0.15 & +31\% & 0.60 & 0.87 \\
+    +1h & war & 1165 & 0.35 & 0.62 & +45\% & 3.67 & 5.20 \\
+    +3h & overall & 2159 & 0.23 & 0.41 & +44\% & 2.72 & 3.86 \\
+    +3h & pre-war & 992 & 0.10 & 0.15 & +36\% & 0.59 & 0.87 \\
+    +3h & war & 1167 & 0.34 & 0.62 & +46\% & 3.65 & 5.19 \\
+    +6h & overall & 2159 & 0.22 & 0.41 & +45\% & 2.72 & 3.86 \\
+    +6h & pre-war & 989 & 0.09 & 0.15 & +37\% & 0.59 & 0.87 \\
+    +6h & war & 1170 & 0.33 & 0.62 & +46\% & 3.65 & 5.19 \\
+    +12h & overall & 2159 & 0.22 & 0.41 & +45\% & 2.72 & 3.86 \\
+    +12h & pre-war & 983 & 0.09 & 0.15 & +38\% & 0.60 & 0.87 \\
+    +12h & war & 1176 & 0.33 & 0.62 & +46\% & 3.64 & 5.17 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{\texttt{price\_range} extended metrics.}
+  \label{tab:metrics-pricerange}
+  \begin{tabular}{@{}rlrrrrrr@{}}
+    \toprule
+    Horizon & Slice & $n$ & TFT MAE & Persist.\ MAE & Reduction & TFT RMSE & Persist.\ RMSE \\
+    \midrule
+    +1h & overall & 2159 & 0.718 & 0.495 & -45\% & 1.287 & 0.981 \\
+    +1h & pre-war & 994 & 0.154 & 0.180 & +14\% & 0.256 & 0.278 \\
+    +1h & war & 1165 & 1.200 & 0.764 & -57\% & 1.736 & 1.310 \\
+    +3h & overall & 2159 & 0.719 & 0.578 & -24\% & 1.286 & 1.107 \\
+    +3h & pre-war & 992 & 0.155 & 0.220 & +30\% & 0.257 & 0.329 \\
+    +3h & war & 1167 & 1.199 & 0.883 & -36\% & 1.733 & 1.475 \\
+    +6h & overall & 2159 & 0.721 & 0.630 & -14\% & 1.289 & 1.194 \\
+    +6h & pre-war & 989 & 0.156 & 0.233 & +33\% & 0.256 & 0.353 \\
+    +6h & war & 1170 & 1.198 & 0.966 & -24\% & 1.734 & 1.589 \\
+    +12h & overall & 2159 & 0.724 & 0.701 & -3\% & 1.294 & 1.252 \\
+    +12h & pre-war & 983 & 0.157 & 0.278 & +43\% & 0.257 & 0.390 \\
+    +12h & war & 1176 & 1.198 & 1.055 & -14\% & 1.737 & 1.658 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Reading.} Three patterns stand out. On \texttt{log\_volume}, the primary liquidity target, the TFT beats persistence at every horizon and in both regimes, and the margin widens with horizon (from 46\% at $+1$h to 71\% at $+12$h overall), consistent with the delayed-propagation reading of RQ1 and stable across the war boundary. On \texttt{amihud}, the TFT also beats persistence throughout (42 to 46\% overall); absolute errors are on the order of $10^{-4}$ and are dominated by war-regime spikes. On \texttt{price\_range}, the picture splits by regime: the TFT beats persistence in the pre-war window (reduction rising to $+43$\% at $+12$h) but underperforms it overall and in the war regime (negative reductions). Trained only on pre-war data, the model reverts toward the historical mean and cannot reach the war-regime volatility spikes (actual \texttt{price\_range} up to 14.4 against a predicted ceiling near 1.5), the regime-extrapolation failure discussed in Section~\ref{sec:predictive-performance} and Section~\ref{sec:limitations}.
+
+\chapter{Reproducibility statement}\label{app:reproducibility}
+
+The Phase~2 training was run on Google Colab (T4 GPU); the LLM extraction and the Phase~1 analyses were run locally (Apple Silicon, MPS backend). Software with a paper of record is cited; the rest are attributed here by name, version, and source.
+
+\textbf{Software libraries.} Version constraints are pinned in the training notebook \texttt{02\_notebooks/13\_tft\_v2\_training\_colab.ipynb}.
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{Software libraries and versions.}
+  \label{tab:software}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    Library & Version & Role \\
+    \midrule
+    Python & 3.x & runtime \\
+    \texttt{numpy} & $<$ 2.0 & numerics \\
+    \texttt{pandas} & n/a & data processing and hourly aggregation \\
+    PyTorch (\texttt{torch}) & $\geq$ 2.3, $<$ 2.4 & deep-learning backend \\
+    Lightning (\texttt{lightning}) & $\geq$ 2.2, $<$ 2.4 & training loop \\
+    \texttt{pytorch-forecasting} & $\geq$ 1.0, $<$ 1.2 & TFT implementation \\
+    HuggingFace \texttt{transformers} & n/a & FinBERT inference \citep{wolf2020} \\
+    \texttt{yfinance} & n/a & market-data retrieval \\
+    \texttt{beautifulsoup4} & n/a & article-body HTML parsing \\
+    \texttt{scipy} & n/a & statistical tests (Welch t-test, correlations) \\
+    \texttt{sqlite3} (stdlib) & n/a & database \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Models and APIs.}
+\begin{itemize}
+  \item Claude Haiku 4.5 (Anthropic), via the tool-use API, for Phase~2 feature extraction (Section~\ref{sec:feature-extraction}).
+  \item GPT-5.5 (OpenAI), via the ChatGPT interface, as the inter-model calibration reference (Section~\ref{sec:calibration-methods}).
+\end{itemize}
+
+\textbf{Data sources.}
+\begin{itemize}
+  \item GDELT 2.0 Document API \citep{leetaru_schrodt2013}, for news article metadata (\url{https://www.gdeltproject.org}).
+  \item U.S.\ Energy Information Administration (EIA) v2 API, weekly crude inventory series \texttt{WCRSTUS1} (\url{https://www.eia.gov/opendata/}).
+  \item yfinance / Yahoo Finance, hourly OHLCV for \texttt{CL=F}, \texttt{DX-Y.NYB}, and \texttt{\^{}VIX}.
+\end{itemize}
+
+\textbf{Determinism.} The reported TFT v2 run fixes the random seed to 42 with deterministic algorithms; its exact configuration is stored in \texttt{run\_metadata.json}. Exact pinned library versions and data-source access dates are to be recorded from the environment at finalisation.

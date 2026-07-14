@@ -1,0 +1,354 @@
+\chapter{Methods}\label{chap:methods}
+
+\section{Data sources and acquisition}\label{sec:data-sources}
+
+This thesis combines three distinct data sources into a unified hourly dataset for WTI crude oil: market data on prices and trading activity, structured macroeconomic indicators, and unstructured news content. Each source has its own native cadence and access pattern, and aligning them onto a common time grid is a central methodological question, addressed in Section~\ref{sec:temporal-alignment}.
+
+\subsection{Commodity selection}\label{sec:commodity-selection}
+
+WTI crude oil futures were chosen as the target commodity after preliminary screening of candidates. Sugar futures were initially considered but excluded due to limited price variability and weak responsiveness to news events at hourly resolution, both of which are essential for the research questions of this thesis. WTI, in contrast, has richer event structure driven by geopolitics, OPEC policy, the weekly EIA inventory cycle, and broader macroeconomic forces, all of which produce measurable hourly volume and price reactions.
+
+\subsection{Market data}\label{sec:market-data}
+
+Hourly OHLCV data are retrieved via the yfinance Python library \citep{yfinance} for three instruments:
+
+\begin{itemize}
+  \item \texttt{CL=F}: WTI crude oil front-month futures contract, the primary target series
+  \item \texttt{DX-Y.NYB}: the U.S.\ Dollar Index (DXY), used as a macroeconomic covariate
+  \item \texttt{\^{}VIX}: the CBOE Volatility Index, used as a market-stress covariate
+\end{itemize}
+
+DXY and VIX enter as exogenous controls in the Phase~2 modeling pipeline (Section~\ref{sec:phase2}), allowing the news signal to be isolated from broader macro-financial dynamics. They are not used in the Phase~1 statistical analyses (Section~\ref{sec:phase1}), which focus on the direct relationship between news sentiment and trading volume without macro controls.
+
+From the raw OHLCV records, we derive three liquidity and volatility proxies and one return measure at hourly resolution:
+
+\begin{itemize}
+  \item \texttt{log\_volume}: the natural logarithm of contracts traded per hour, used as the primary liquidity measure
+  \item \texttt{price\_range}: the hourly Parkinson range \citep{parkinson1980}, computed as $\log(\text{high}) - \log(\text{low})$, a high-frequency volatility proxy
+  \item \texttt{log\_return}: the hourly log return, $\log(\text{close}_t / \text{close}_{t-1})$
+  \item \texttt{amihud}: the Amihud illiquidity ratio at hourly resolution, computed as $\lvert \text{log\_return} \rvert / \text{volume}$ following \citet{amihud2002}. The ratio is undefined for hours with zero volume; such rows are excluded from analyses where Amihud is the dependent variable.
+\end{itemize}
+
+The canonical market grid spans 13 May 2024 to 13 May 2026, yielding 11{,}232 hourly observations across roughly 24 months of trading. The Phase~1 analysis (Section~\ref{sec:phase1-data}) ran on an earlier market pull that reached further back, approximately March 2024 to March 2026 (11{,}219 aligned market hours), and those values are preserved with the Phase~1 features. The two windows differ because yfinance serves hourly data only for a rolling window of about the last two years: by the time the market data was re-pulled and the corpus extended through the post-war period for Phase~2 (Section~\ref{sec:phase2-data}), the earliest hours of 2024 had dropped out of that window, so the Phase~2 grid begins in May 2024. The roughly 13-hour gap between the two counts is immaterial to any result and reflects only this re-pull, not a change in methodology.
+
+\subsection{EIA inventory data}\label{sec:eia-data}
+
+Weekly U.S.\ commercial crude oil inventory reports are retrieved from the U.S.\ Energy Information Administration (EIA) v2 API \citep{eia}. We query the WCRSTUS1 series (weekly ending stocks of crude oil and petroleum products, U.S.\ total), specifying \texttt{frequency=weekly}. The full historical series from January 2020 onward is downloaded to allow computation of rolling baselines, even though only the 2024--2026 window is used in modeling.
+
+Each weekly release is converted into two derived features available at hourly resolution after temporal alignment:
+
+\begin{itemize}
+  \item \texttt{is\_eia\_release}: a binary indicator that fires on the trading hour containing or immediately following the official release time
+  \item \texttt{eia\_surprise}: the weekly inventory change relative to a rolling four-week baseline, capturing the directional surprise component of each release
+\end{itemize}
+
+EIA releases occur on Wednesdays at 10:30 a.m.\ U.S.\ Eastern Time and are a regularly scheduled, closely watched event in oil markets, which is why we derive EIA features from them. In the reported models, however, the EIA cycle enters only through the \texttt{is\_wednesday} calendar proxy (Section~\ref{sec:input-typing}): the \texttt{is\_eia\_release} and \texttt{eia\_surprise} features were computed and stored, and tested in an additional model run, but the continuous surprise carried negligible feature importance and the release flag added little beyond the calendar proxy, so neither is part of the canonical model.
+
+\subsection{News data}\label{sec:news-data}
+
+Unstructured news content is sourced from the GDELT Project \citep{leetaru_schrodt2013}, a large-scale machine-monitored news corpus covering broadcast, print, and web sources worldwide. We use the GDELT 2.0 Document API to retrieve article metadata (URL, source, publication time, title) across a set of thematic queries chosen to capture WTI-relevant content.
+
+The query set evolved across the two methodological phases. In Phase~1, the focus was on direct oil-market terms, yielding eight queries:
+
+\begin{lstlisting}
+crude oil market
+OPEC production cut
+oil supply demand
+petroleum inventory
+Brent crude price
+oil inventory report
+energy market outlook
+crude oil WTI price
+\end{lstlisting}
+
+The Phase~1 scrape produced 51{,}948 raw article records across the March 2024 to February 2026 window. After deduplication and English-only filtering, 16{,}326 unique articles remained. Article body content was retrieved by HTTP-fetching each URL and parsing the page. Body retrieval achieved an approximate 80\% response rate, with failures concentrated on paywalled domains, Cloudflare-protected sources, and pages requiring JavaScript rendering. An allow-list heuristic (Section~\ref{sec:filtering}) classified 7{,}756 of the retrieved bodies as substantive content. The Phase~1 analyses operated on a combined dataset of 13{,}690 articles: 7{,}756 with valid bodies feeding title-plus-body sentiment extraction, and 5{,}934 articles where body retrieval failed but the title alone was retained as a fallback input.
+
+In Phase~2, the query set was expanded to capture geopolitical and demand-side themes that became prominent in the post-war coverage period (Section~\ref{sec:phase2-data}):
+
+\begin{lstlisting}
+Iran sanctions oil
+Saudi Arabia oil production
+China oil demand
+Russia oil exports
+oil supply disruption
+\end{lstlisting}
+
+The expanded scrape, re-run over the full window through May 2026 with both query sets, produced 76{,}345 raw article records spanning January 2024 to May 2026. After deduplication and English-only filtering, 22{,}795 unique articles remained, the modeling-ready Phase~2 corpus (Section~\ref{sec:phase2-data}). Across this corpus, 19{,}619 articles produced a real body; the remaining 3{,}176 yielded either a null response, a Cloudflare or paywall block, or an explicit fetch error. The choice to forward articles without bodies into LLM-based filtering rather than retain a title-only fallback path is discussed in Section~\ref{sec:filtering}.
+
+\subsection{Persistence}\label{sec:persistence}
+
+All retrieved data are stored in a single SQLite database (\texttt{wti\_thesis.db}) with the following primary tables: \texttt{articles} (raw GDELT records and scraped bodies), \texttt{market\_context} (the hourly grid of derived WTI liquidity features together with the DXY and VIX levels), \texttt{eia\_events} (raw EIA releases), \texttt{llm\_features} (LLM-extracted news features, Phase~2 only), \texttt{article\_entities} (canonical entity mentions per article, used to build the entity flags), and \texttt{liquidity} (the modeling-ready joined view, populated by the alignment step in Section~\ref{sec:temporal-alignment}). Storing all data in a single relational database, rather than in CSV intermediates as in the original Phase~1 pipeline, eliminated state drift across notebooks and made the canonical alignment computable as a single deterministic join.
+
+\section{Temporal alignment}\label{sec:temporal-alignment}
+
+The three data sources operate on different clocks. Hourly market data lives on a clean grid of trading hours, with each hourly bar tagged by its closing timestamp. EIA releases are weekly events at fixed times. News articles, however, can be published at arbitrary timestamps including overnight hours, weekends, and holidays when no trading is taking place. To support models that condition liquidity at hour $t$ on news published before $t$, each article must be assigned to a specific hour in the market grid.
+
+We address this with two design choices, applied at insertion time when articles are written to the database: ceiling assignment to the next trading hour, and forward-assignment of off-hours articles to the next available trading hour.
+
+\subsection{Ceiling assignment to the next trading hour}\label{sec:ceiling}
+
+For each article with publication timestamp $\tau$, we compute its assigned market hour as
+\begin{equation}
+  \text{datetime\_hour}(\tau) = \lceil \tau \rceil_{\text{1h}} .
+\end{equation}
+That is, an article published at 14:23 UTC is assigned to the 15:00 hourly bar, not the 14:00 bar. The motivation is causal: the 14:00 hourly bar covers the period from 14:00 to 15:00, and its volume is partially formed before 14:23. Assigning the article to the 14:00 bar would create a reverse-causal contamination, allowing news to influence a candle whose formation preceded the news publication. The ceiling rule guarantees that the article strictly precedes the start of the trading hour it is matched to.
+
+An earlier version of the pipeline used \texttt{round} rather than \texttt{ceil}, which produced the same causal leak for articles published in the second half of an hour. The fix was applied early in the project and propagated through all downstream notebooks.
+
+The ceiling rule is conservative: it assigns news to the next full hour even when the article would plausibly have moved markets within minutes of publication. This may underestimate the immediate (intra-hour) reaction. However, it eliminates the alternative bias of attributing pre-publication price movements to post-publication news, which is the more serious threat to causal inference. This conservative direction of the bias, underestimating rather than inflating the immediate reaction, is noted again where the lag results are interpreted (Section~\ref{sec:lag-ols}).
+
+\subsection{Forward-assignment of off-hours articles}\label{sec:forward-assignment}
+
+A substantial portion of the news corpus is published during hours when no trading is taking place: overnight, on weekends, or during holiday closures. Two strategies were considered. The first is to drop such articles entirely. The second is to forward-assign them to the next available trading hour. We adopted the second.
+
+The motivation is empirical. Geopolitical events, supply shocks, and weekend OPEC communiqu\'es are routinely covered during off-hours and are precisely the events that drive the largest market reactions when trading resumes. Dropping them would systematically remove the most informative subset of the corpus. Forward-assignment, by contrast, preserves the information at the cost of introducing a measurement-time lag between publication and the assigned hour.
+
+Concretely, for each article whose ceiling-assigned hour does not appear in the market grid (because the market is closed), we assign the article to the next available \texttt{market\_context} row in chronological order. This is implemented as a vectorised pandas \texttt{merge\_asof} join with \texttt{direction='forward'}, which performs the lookup efficiently across the full corpus in a single pass.
+
+We retain a diagnostic column, \texttt{assignment\_gap}, defined as the difference in hours between the article's assigned market hour and its original publication timestamp:
+\begin{equation}
+  \text{assignment\_gap} = \text{datetime\_hour} - \text{publication\_timestamp} .
+\end{equation}
+For articles published during a trading session, this is at most one hour. For weekend or overnight articles, it can extend to many hours or, in the worst case, across a multi-day holiday closure. The gap is preserved in the \texttt{liquidity} table and is used downstream both as a control variable and as a basis for stratified analyses that distinguish \emph{contemporaneous} news (gap $<$ 2h) from \emph{forward-assigned} news (gap $\geq$ 2h). The exploratory Phase~1 VAR (later abandoned, Section~\ref{sec:var}) was restricted to contemporaneous articles aggregated to hourly resolution; the TFT models in Phase~2 use the full corpus and let the model learn to weight contemporaneous and forward-assigned articles differently if the data support such a distinction.
+
+\subsection{Joined output}\label{sec:joined-output}
+
+The alignment step produces the \texttt{liquidity} table, in which each row is one article enriched with the market-context features at its assigned hour. One boundary effect is worth noting: under the forward-assignment rule (Section~\ref{sec:forward-assignment}), articles published before the market grid begins are mapped to the first available trading hour rather than dropped. In the Phase~2 corpus this places roughly 3{,}600 pre-coverage articles (published before May 2024) onto the first grid hour, which the models therefore see as a single unusually high-count hour at the very start of the series. Excluding pre-coverage articles outright removes this artifact, an adjustment applied in the v2.3 ablation.
+
+The resulting \texttt{liquidity} table has 22{,}795 rows, of which 15{,}290 are contemporaneous (gap $<$ 2h) and 7{,}505 are forward-assigned (gap $\geq$ 2h). These two subsets are tracked separately in some analyses but combined in the primary modeling.
+
+\section{News feature extraction approaches}\label{sec:feature-extraction}
+
+News articles are unstructured text; downstream statistical and deep learning models require numerical features. The transformation from raw article body to model-ready features is the central NLP problem of this thesis. We use two distinct approaches across the two methodological phases of the project: FinBERT-based sentiment classification in Phase~1, and structured LLM extraction with Claude Haiku in Phase~2. The two approaches differ both in their output representation and in their conceptual model of what a ``news feature'' is.
+
+\subsection{FinBERT sentiment extraction}\label{sec:finbert}
+
+In Phase~1, we use FinBERT \citep{araci2019}, a BERT variant fine-tuned on financial text for three-class sentiment classification (positive, neutral, negative). FinBERT is among the most widely used sentiment models in financial NLP and provides a natural baseline for comparison.
+
+The model is applied via the HuggingFace Transformers library \citep{wolf2020}, running on Apple Silicon GPU acceleration via the MPS backend. For each article, the model returns softmax probabilities over the three classes; the predicted label is taken as the argmax of these probabilities, and a scalar \texttt{confidence} value is recorded as the maximum class probability:
+\begin{equation}
+  \text{confidence} = \max(P_{\text{positive}}, P_{\text{negative}}, P_{\text{neutral}}) .
+\end{equation}
+
+The categorical label, all three class probabilities, and the confidence value are retained for downstream use (persisted in the Phase~1 feature table \texttt{gdelt\_wti\_sentiment.csv}).
+
+FinBERT is applied twice per article:
+
+\begin{itemize}
+  \item \textbf{Title-only input}: the article title fed alone to the model
+  \item \textbf{Title-plus-body input}: the title concatenated with the body, subject to FinBERT's 512-token input limit
+\end{itemize}
+
+Body content is truncated where necessary, with the title preserved at the start of the sequence so that the most salient signal is never lost to truncation. Articles for which body retrieval failed (Section~\ref{sec:news-data}) fall back to title-only sentiment as the canonical input, with the body-availability status preserved in the database so downstream analyses can distinguish the two input regimes.
+
+For the lag OLS analysis (Sections~\ref{sec:ols-spec} and~\ref{sec:phase1}), we use the FinBERT class probabilities directly rather than the argmax label, so that each article is weighted by the model's confidence instead of collapsing to a hard vote. The lag OLS uses \texttt{P(negative)} and \texttt{P(positive)} as two separate continuous regressors, which preserves the bearish-versus-bullish asymmetry that RQ2 requires. The earlier discrete mapping $\{\text{positive}: +1, \text{neutral}: 0, \text{negative}: -1\}$, which discards the probability magnitudes, is retained only as a baseline for comparison in Section~\ref{sec:lag-ols}. The title-only probabilities are reserved for the comparative analysis in Section~\ref{sec:headline-bias} (the headline bias finding), where they support both a categorical divergence measure and a continuous one.
+
+\subsection{Structured LLM extraction with Claude Haiku}\label{sec:schema}
+
+In Phase~2, FinBERT is replaced by Claude Haiku 4.5 \citep{anthropic_claude}, a smaller-scale member of Anthropic's Claude model family, used to extract a richer set of structured features from each article. The motivation for moving from FinBERT to an LLM is taken up in detail in Chapter~\ref{chap:experiments} (Section~\ref{sec:llm-extraction}); briefly, the three-class categorical output of FinBERT collapses information that is naturally continuous and multidimensional, and the confidence value (the maximum class probability) carries limited downstream signal.
+
+The Haiku extraction underwent one schema iteration during Phase~2. The initial schema (referred to as Haiku v1) was used to produce features for the first TFT training (Section~\ref{sec:tft-v1}) on the Phase~1 corpus of articles. It returned, for each article: a continuous \texttt{sentiment\_score} in $[-1, +1]$ measuring the article's net directional impact on the WTI price ($-1$ strongly bearish, $+1$ strongly bullish, assessed from the article's content rather than its headline tone), a \texttt{magnitude} score for event importance, a \texttt{price\_direction} label, an \texttt{event\_type} label, a list of \texttt{entities}, a \texttt{certainty} score, and a \texttt{time\_horizon} label. The revised schema (referred to as Haiku v2) was introduced in response to an inter-model calibration finding documented in Section~\ref{sec:calibration}. It dropped the \texttt{price\_direction} field, changed \texttt{event\_type} from a single label to an array of one to three labels ordered by salience, introduced an explicit \texttt{usable} boolean for filtering (Section~\ref{sec:filtering}), and added three orthogonal economic channel scores (\texttt{supply\_impact}, \texttt{demand\_impact}, \texttt{risk\_premium}) described in Section~\ref{sec:channel-decomposition}. The full Haiku v2 prompt and tool schema are reproduced in Appendix~\ref{app:prompt}.
+
+\subsection{Tool-use API and schema enforcement}\label{sec:tool-use}
+
+The Haiku extraction uses Anthropic's tool-use API \citep{anthropic_tooluse} with \texttt{tool\_choice} forcing the model to invoke a single \texttt{extract\_article\_features} tool. This is not a stylistic choice; it is a methodological one. Tool-use enforces the output schema at the API level, including enumerated values for categorical fields, type constraints on numeric fields, and required-field validation. An earlier extraction pass that relied on the LLM to produce valid JSON via prompt instruction alone produced frequent schema violations (e.g., the model returning \texttt{slightly\_bullish} instead of a numeric score, or an out-of-range \texttt{time\_horizon} label). Tool-use enforcement validates the numeric ranges and the scalar enumerated fields at the API boundary and removes almost all such failures. A negligible residue survives where the schema is permissive: the free-text \texttt{event\_type} array received an off-list label on 78 of 10{,}514 articles (0.74\%, \texttt{structural}), and one article carries a malformed \texttt{time\_horizon} string; both are treated as noise downstream. The enforcement therefore eliminates the bulk of the parsing brittleness rather than every last case.
+
+The tool-use design also enables a short-circuit optimisation. When the model determines that an article is unusable (a paywall block, a cookie notice, or off-topic content), only the \texttt{usable} field is required to be set; all other fields are optional. The model exploits this to return roughly 10 output tokens instead of 200 on unusable articles, reducing the cost of unusable-article extraction by roughly 90\% at the per-article output level.
+
+\subsection{Channel decomposition}\label{sec:channel-decomposition}
+
+The Haiku schema includes three continuous scores beyond the composite sentiment value: \texttt{supply\_impact}, \texttt{demand\_impact}, and \texttt{risk\_premium}, each in $[-1, +1]$. These three channels are designed to decompose the economic content of a news article into orthogonal dimensions:
+
+\begin{itemize}
+  \item \texttt{supply\_impact} measures the article's implication for the quantity of oil available to the market. Positive values indicate supply increases (sanctions lifted, OPEC adding barrels, new pipeline online); negative values indicate supply decreases (refinery outages, OPEC cuts, infrastructure attacks).
+  \item \texttt{demand\_impact} measures the article's implication for oil consumption. Positive values indicate demand strength (Fed easing, China stimulus, growth surprise); negative values indicate demand weakness (recession signals, Fed hawkishness, lockdowns).
+  \item \texttt{risk\_premium} measures the change in geopolitical or operational risk priced into oil. Positive values indicate escalation (military strikes on oil infrastructure, sanctions imposed); negative values indicate de-escalation (ceasefire, sanctions lifted).
+\end{itemize}
+
+The three channels were not part of the original Phase~2 schema. They were introduced as a response to a documented inter-model calibration failure on the composite \texttt{sentiment\_score}, in which Haiku and a GPT-family reference model disagreed on the sign of sentiment for high-magnitude geopolitical events. The full reasoning behind the decomposition is documented in Chapter~\ref{chap:experiments} (the calibration failure in Section~\ref{sec:calibration}, and the decomposition with its re-calibration in Section~\ref{sec:channel-response}). The methodological role of the channels in this thesis is twofold: they are higher-resolution features for the TFT v2 model (Section~\ref{sec:tft-v2}), and they serve as a defensible substitute for human-rater agreement when validating LLM-extracted features (Section~\ref{sec:calibration}).
+
+The composite \texttt{sentiment\_score} is retained alongside the channels rather than replaced by them. Three reasons motivate this. First, it preserves continuity with the Phase~1 headline bias experiment, which depends on a single sentiment value. Second, it allows ablation studies comparing the composite signal against the decomposed channels in the TFT (Section~\ref{sec:tft-v2}). Third, it provides a hedge against the channels turning out to be individually noisy at production scale.
+
+\subsection{Magnitude, event type, entities, certainty, and time horizon}\label{sec:other-fields}
+
+The remaining fields in the Haiku schema capture orthogonal dimensions of news content. \texttt{magnitude} is a continuous score in $[0, 1]$ measuring how market-moving an event is, with anchors provided in the prompt (0.0 = negligible event, 1.0 = historic; most articles score in the 0.1--0.4 range, with a major OPEC cut anchored at 0.9 and a full-scale geopolitical crisis at 1.0). \texttt{event\_type} is an array of one to three categorical labels drawn from a fixed set of six values (\texttt{geopolitical}, \texttt{supply}, \texttt{demand}, \texttt{macro}, \texttt{technical}, \texttt{other}), ordered by salience within the article. \texttt{entities} is a list of named actors central to the article (countries, organisations, oil companies, key officials). \texttt{certainty} is a continuous score in $[0, 1]$ distinguishing rumour, analyst forecast, and confirmed fact. \texttt{time\_horizon} is a categorical label drawn from \texttt{immediate} (hours to a day), \texttt{short\_term} (days to weeks), and \texttt{structural} (months or longer themes such as energy transition).
+
+Each of these fields encodes information that FinBERT's three-class output cannot represent, and each enters the TFT v2 model either as a continuous input or as a categorical that the model's Variable Selection Network can weight independently. The raw \texttt{entities} lists are normalised in post-processing to a fixed canonical set of 71 actors through an alias mapping (for example ``Tehran'' and ``Iranian'' map to \texttt{Iran}); at hourly aggregation each hour receives a binary vector of length 71 flagging which canonical entities the dominant article of that hour named, and this vector enters TFT v2 as 71 entity-flag features (the full list is in Appendix~\ref{app:entities}). The design rationale for each field, including the choice to encode \texttt{event\_type} as a list rather than a single value and the choice to handle entity normalisation in post-processing rather than in the prompt, is discussed in Section~\ref{sec:llm-extraction}.
+
+\section{Filtering strategies}\label{sec:filtering}
+
+A substantial fraction of articles retrieved from GDELT is not substantive news. Common categories of non-substantive content include paywall placeholders, cookie consent notices, Cloudflare blocks, scraping error pages, generic stock-pick listicles, and articles whose body content is unrelated to oil markets despite matching one of the query keywords. Filtering these out is essential, since they would otherwise contribute noise to the sentiment signal and bias the downstream models.
+
+We use two distinct filtering strategies across the two phases. Phase~1 used a regex/keyword heuristic on the article body. Phase~2 replaced this with an LLM-judged binary classification of content usability, exposed as the \texttt{usable} field in the Haiku extraction. Both approaches are retained as columns in the database (\texttt{body\_valid} and \texttt{usable} respectively), enabling a direct comparison reported in Section~\ref{sec:filter-comparison}.
+
+\subsection{Regex/keyword heuristic (Phase 1)}\label{sec:regex-filter}
+
+The Phase~1 filter, named \texttt{body\_valid}, is an allow-list applied to the article body text. A body is considered valid if and only if it satisfies all of the following criteria:
+
+\begin{itemize}
+  \item Minimum length of 400 characters (excluding whitespace and HTML residues)
+  \item Presence of at least one term from a domain-specific keyword list covering energy, financial, and geopolitical vocabulary
+  \item Absence of press-release boilerplate (vendor blacklist for known PR-distribution patterns)
+  \item An all-caps ratio below 30\%, computed over words of more than two characters in texts containing more than ten words (excluding scraped pages that are predominantly menu links, category headers, or stock-ticker listings)
+\end{itemize}
+
+The filter was developed iteratively over the early project, starting as a blacklist of known bad phrases (Cloudflare error text, cookie notices) and evolving into the allow-list form described above. On the Phase~1 corpus of 16{,}326 articles with English text and successful body retrieval, the filter classified 7{,}756 articles (47.5\%) as having valid bodies. The remainder were either retained with title-only sentiment as a fallback or excluded from the Phase~1 analyses depending on the specific notebook (Section~\ref{sec:phase1-data} details which analyses used which subset).
+
+The regex heuristic is fast, reproducible, and transparent: any analyst can read the rules and predict their behaviour on a given article. It is also limited in ways that became evident during inspection. Articles passing the filter sometimes contained substantive boilerplate (long disclaimers, repeated company descriptions) that nevertheless mentioned energy keywords. Articles failing the filter sometimes contained legitimate analyst commentary whose body length fell just below the 400-character threshold, or whose vocabulary did not match the energy keyword list closely enough.
+
+These observations motivated the migration to a more capable filter in Phase~2.
+
+\subsection{LLM-judged usable flag (Phase 2)}\label{sec:usable-filter}
+
+The Phase~2 filter, exposed as the \texttt{usable} boolean in the Haiku schema, asks the LLM itself to judge whether the article body is substantive WTI-relevant content. The prompt instructs the model to return \texttt{usable=false} for paywall placeholders, Cloudflare blocks, cookie notices, or articles that are clearly not about oil markets, macro, or geopolitics relevant to oil. When \texttt{usable=false}, the model is permitted (and instructed) to omit all other fields, exploiting the short-circuit optimisation discussed in Section~\ref{sec:tool-use}.
+
+The migration from \texttt{body\_valid} to \texttt{usable} is motivated by three considerations. First, the LLM has access to semantic content that a regex cannot match: it can distinguish a substantive analyst piece from a press-release-shaped article that happens to contain energy keywords. Second, the LLM's judgement is calibrated against the same content model used for the rest of the feature extraction, so the filter and the features are coherent (an article flagged as usable will produce features that are themselves usable). Third, the marginal cost of sending more articles to the LLM is small under batch processing with prompt caching, so a broader filter at the input does not impose a meaningful resource constraint.
+
+The \texttt{usable} flag becomes the primary content filter in Phase~2. A stricter variant, \texttt{usable\_strict}, additionally requires at least one of the three economic channels (\texttt{supply\_impact}, \texttt{demand\_impact}, \texttt{risk\_premium}) to be non-zero, which removes the roughly 1{,}161 articles the model marked topical yet scored as carrying no material market impact; \texttt{usable\_strict=1} is the canonical filter for TFT v2 training (Section~\ref{sec:filter-comparison}), while \texttt{usable=1} is used for the filter comparison. The \texttt{body\_valid} column is retained in the database for the comparative analysis reported in Section~\ref{sec:filter-comparison} but is no longer applied as a filter in any modelling step.
+
+\subsection{Comparative analysis}\label{sec:filter-comparison-methods}
+
+Both filter columns coexist in the database for the Phase~2 corpus, enabling a direct disagreement analysis. Of 19{,}619 Phase~2 articles processed by the LLM, 13{,}550 are flagged \texttt{body\_valid=1} and 11{,}675 are flagged \texttt{usable=1}. The two filters disagree on a non-trivial proportion of articles in both directions: regex-rejected articles that the LLM accepted as substantive (the regex's false positives), and regex-accepted articles that the LLM rejected as boilerplate (the regex's false negatives). The full agreement analysis, including Cohen's kappa and worked examples of disagreements, is reported in Section~\ref{sec:filter-comparison}.
+
+\section{Statistical models}\label{sec:statistical-models}
+
+The empirical analysis of news impact on WTI liquidity rests on lag-structured ordinary least squares (OLS) regressions, described in Section~\ref{sec:ols-spec}, which provide the canonical statistical evidence for the research questions on lag structure (RQ1) and bearish-versus-bullish asymmetry (RQ2). An exploratory vector autoregression was also fitted during development but abandoned: the sparse, event-driven sentiment signal (more than half of all hours carry no contemporaneous news) left it unable to identify significant dynamics. It is not developed as a method here; its outcome, and the move to the deep-learning model of Section~\ref{sec:tft-methods} that it motivated, are noted in Section~\ref{sec:var}.
+
+\subsection{Lag OLS specification}\label{sec:ols-spec}
+
+The lag OLS analysis tests whether news sentiment published at hour $t$ predicts trading volume at subsequent hours $t + k$, where $k$ ranges over a fixed set of lag horizons. The specification at lag $k$ is
+\begin{equation}
+  \text{log\_volume}_{t+k} = \beta_0 + \beta_1\, P(\text{negative})_t + \beta_2\, P(\text{positive})_t + \varepsilon_t ,
+\end{equation}
+where $P(\text{negative})_t$ and $P(\text{positive})_t$ are the FinBERT title-plus-body class probabilities for the article published at hour $t$. The neutral probability is the omitted reference: the three class probabilities sum to one, so including all three would be perfectly collinear. The coefficients $\beta_1$ and $\beta_2$ therefore measure the expected difference in \texttt{log\_volume} at hour $t + k$ for a maximally confident bearish or bullish article (class probability equal to one), respectively, relative to a neutral one. Using the two class probabilities rather than a single signed sentiment regressor is essential to the asymmetry question. A signed specification would force the model to assume that the bearish coefficient is the negative of the bullish coefficient (a symmetric response); the two-probability specification allows the two coefficients to vary independently, which is precisely what RQ2 requires. This continuous encoding is the primary Phase~1 specification. It generalises the earlier two-dummy encoding (which shares the same two-coefficient structure but with hard 0/1 indicators) by weighting each article by FinBERT's confidence, so that a 0.95-bearish article contributes more than a 0.51-bearish one; the dummy version is retained as a baseline in Section~\ref{sec:lag-ols}.
+
+A separate regression is estimated at each lag value $k \in \{1, 2, 3, 4, 6, 8, 12\}$. The lag set is dense at short horizons, where information propagation is expected to be detectable, and sparser at longer horizons, where the effect is expected to attenuate. At each lag, we report the two coefficients, their standard errors, p-values, and the regression $R^2$. The $R^2$ is expected to be small in absolute terms, since news sentiment is one input among many that influence hourly trading volume; the modelling goal is to detect a structured pattern of coefficients across lags rather than to maximise explanatory power. A statistically significant coefficient at the conventional $p < 0.05$ threshold, repeated across multiple adjacent lags with a coherent magnitude pattern, is the criterion for claiming a detectable lag effect.
+
+The contemporaneous specification ($k = 0$) is reported separately as a baseline. At hour $t$, the article has just been published, so a detectable effect requires the news to act on the market within the same one-hour bar. This turns out to be a small but statistically significant effect (Section~\ref{sec:lag-ols}): rather than a null result, it establishes that sentiment carries detectable signal from the moment of publication and motivates tracing how that signal evolves across the subsequent lags. Section~\ref{sec:lag-ols} reports the contemporaneous result together with the lag regressions.
+
+All regressions are estimated by ordinary least squares with the default standard error formula. Each observation is a single article. The Phase~1 corpus of 13{,}690 articles produces between roughly 9{,}900 and 11{,}600 per-lag regression rows after dropping articles whose target hour $t + k$ falls outside the coverage window (coverage falls as the lag lengthens). The regression treats these as a cross-section of articles rather than as a sequential time series, so heteroskedasticity- and autocorrelation-consistent (HAC) standard error corrections are not applied. The assumption may slightly underestimate true uncertainty if articles published close in time share unobserved common shocks, but the structured pattern of coefficient significance across multiple lags is robust to this concern: even with moderately wider confidence intervals, the pattern of bearish coefficients peaking at lag $+6$ hours with bullish coefficients showing the same pattern at lower magnitude would survive.
+
+\section{Temporal Fusion Transformer}\label{sec:tft-methods}
+
+The Temporal Fusion Transformer (TFT) \citep{lim2021}, introduced by Lim, Ar\i k, Loeff, and Pfister, is a deep-learning architecture for multi-horizon time-series forecasting with mixed continuous and categorical inputs. We adopt the TFT as the primary deep-learning model for the Phase~2 work, training two successive instances (TFT v1 and TFT v2) that share the same architectural skeleton but differ in their feature configuration and training data. This section describes the architecture itself; the feature configurations for each instance are documented in Sections~\ref{sec:tft-v1} and~\ref{sec:tft-v2}.
+
+\subsection{Architecture overview}\label{sec:tft-architecture}
+
+The TFT combines four architectural components into an end-to-end model:
+
+\begin{itemize}
+  \item A \textbf{Variable Selection Network (VSN)} at each input time step, which assigns a learned scalar weight to each input feature, allowing the model to suppress uninformative features automatically
+  \item A pair of \textbf{LSTM encoder--decoder layers} that process the history (encoder) and the forecast horizon (decoder) at fixed resolution
+  \item An \textbf{interpretable multi-head self-attention} layer over the encoded sequence, exposing which historical time steps the model attends to when producing each forecast
+  \item A \textbf{quantile output head} that produces multiple quantile predictions in a single forward pass, enabling prediction intervals without separate models
+\end{itemize}
+
+Three of these components each contribute a distinct interpretability benefit. The Variable Selection Network produces per-feature importance scores that are directly comparable across features, addressing the question of which inputs the model actually uses. The attention layer produces per-time-step weights that expose the temporal structure of the model's reasoning, which is directly relevant to RQ1 on the lag structure of news impact. The quantile output enables uncertainty quantification without separate model training.
+
+\subsection{Input typing}\label{sec:input-typing}
+
+The TFT distinguishes four categories of inputs:
+
+\begin{itemize}
+  \item \textbf{Time-varying known reals}: features whose values are known at every time step in both the history and the forecast horizon. In our setup these are calendar features (\texttt{hour}, \texttt{day\_of\_week}, \texttt{month}) and binary regime indicators (\texttt{is\_us\_session}, \texttt{is\_wednesday} as a proxy for the EIA release day).
+  \item \textbf{Time-varying unknown reals}: features whose values are known only over the history and must be predicted for the forecast horizon. These include the target itself (\texttt{log\_volume}), the market-context features (\texttt{price\_range}, \texttt{log\_return}, \texttt{amihud}, \texttt{dxy}, \texttt{vix}), the continuous Haiku features (the composite \texttt{sentiment\_score}, the three channels, \texttt{magnitude}, \texttt{certainty}), and, in TFT v2, the 71 binary entity flags (see Sections~\ref{sec:tft-v1} and~\ref{sec:tft-v2} for the per-instance feature lists).
+  \item \textbf{Time-varying unknown categoricals}: categorical news features known only over the history. In TFT v2 these are the dominant article's \texttt{event\_type} and \texttt{time\_horizon}, passed as learned embeddings rather than integer codes; encoding them as proper categoricals rather than integers is a design axis whose effect is isolated in the v2 ablation (Section~\ref{sec:feature-importance}).
+  \item \textbf{Static categoricals}: features that are fixed for the duration of a time series. In our single-asset configuration this reduces to a single asset identifier (\texttt{asset = 'WTI'}).
+\end{itemize}
+
+The Variable Selection Network learns separate gating weights for each of these categories, so a feature that is informative in the history (as an unknown real) but uninformative as a calendar input is correctly weighted across both contexts.
+
+\subsection{Forecast configuration}\label{sec:forecast-config}
+
+Both TFT instances condition each forecast on a fixed 48-hour encoder window, providing two full daily cycles of context. This encoder length is intentional: the lag OLS analysis in Phase~1 (Section~\ref{sec:lag-ols}) identified a news-impact peak at lag $+6$ hours, and a 48-hour window comfortably covers both this peak and the second-day ``memory'' effects observed in earlier TFT runs.
+
+The forecast target and horizon differ between the two instances. TFT v1 (Section~\ref{sec:tft-v1}) predicts a single target, \texttt{log\_volume}, one hour ahead. TFT v2 (Section~\ref{sec:tft-v2}) predicts three targets jointly, \texttt{log\_volume}, \texttt{amihud}, and \texttt{price\_range}, at four horizons (1, 3, 6, and 12 hours), so its prediction length is 12 hours and it emits a full trajectory rather than a single step; the $+6$ hour horizon is chosen to coincide with the lag OLS peak.
+
+Both instances are trained with a quantile loss, which produces point predictions at multiple quantiles in a single forward pass and is robust to target outliers without distributional assumptions. TFT v1 uses a single \texttt{QuantileLoss} on its one target; TFT v2 uses a \texttt{MultiLoss} that sums a \texttt{QuantileLoss} over each of the three targets. The median quantile serves as the point forecast throughout.
+
+\subsection{Architectural hyperparameters}\label{sec:tft-hyperparams}
+
+The TFT architecture exposes a small set of hyperparameters governing model capacity. The core width parameters are held constant across both instances, so that any difference between them comes from the features and the forecast configuration rather than from raw capacity:
+
+\begin{itemize}
+  \item \texttt{hidden\_size = 32}: the internal representation dimension
+  \item \texttt{attention\_head\_size = 4}: the number of parallel attention heads
+  \item \texttt{hidden\_continuous\_size = 16}: the embedding dimension for continuous variable processing
+  \item \texttt{learning\_rate = 1e-3}: the initial Adam optimizer learning rate, with on-plateau reduction (patience 3)
+\end{itemize}
+
+Two things differ between the instances. The \texttt{dropout} rate was raised from \texttt{0.1} in TFT v1 to \texttt{0.15} in TFT v2, a modest increase in regularization for the larger v2 input space. And although the core width is unchanged, the trainable-parameter count grows from approximately 113{,}000 in v1 to 298{,}329 in v2, because v2 adds the 71 entity-flag inputs, the two additional targets, and the multi-horizon output head. Holding the width fixed while letting the feature set and forecast configuration expand is deliberate: it keeps the two instances comparable on architectural capacity while isolating the effect of the Phase~2 feature investments.
+
+\subsection{Training procedure}\label{sec:training}
+
+Training is performed in PyTorch Lightning \citep{pytorch_lightning} via the \texttt{pytorch-forecasting} library \citep{pytorch_forecasting}. Both instances share the same optimizer and regularization scaffolding: Adam with the learning rate above, gradient clipping at 0.1 to stabilize updates over long sequences, early stopping on validation loss with a minimum improvement of \texttt{1e-4}, and a Google Colab T4 GPU. Fixed-length sliding-window samples are built by the \texttt{pytorch-forecasting} \texttt{TimeSeriesDataSet} wrapper, which encodes categorical features consistently, constructs the input tensors, and applies group normalization; the held-out sets use the same wrapper with \texttt{stop\_randomization=True} for deterministic evaluation.
+
+Three training settings differ between the instances, reflecting their different scale:
+
+\begin{itemize}
+  \item \textbf{Temporal split.} TFT v1 uses an 80/20 split, the earlier 80\% of hours for training and the most recent 20\% for validation, with no held-out test set. TFT v2 uses a 60/20/20 split into train, validation, and test, with 48-hour buffers between partitions to keep encoder windows from leaking across boundaries; the test set is what enables the pre-war versus war-regime evaluation of Section~\ref{sec:predictive-performance}.
+  \item \textbf{Early stopping and epoch cap.} TFT v1 uses a patience of 5 epochs and a maximum of 30; TFT v2 raises the patience to 10 and the cap to 75. In practice early stopping halts both well before the cap.
+  \item \textbf{Target normalization.} TFT v1 normalizes its single target with a \texttt{GroupNormalizer}. TFT v2, being multi-target, wraps one \texttt{GroupNormalizer} per target in a \texttt{MultiNormalizer}, so each of the three targets is scaled independently before the per-target losses are combined.
+\end{itemize}
+
+For reproducibility, the reported TFT v2 run also fixes the random seed (42) and uses deterministic algorithms.
+
+\subsection{Evaluation and interpretation outputs}\label{sec:evaluation-methods}
+
+For each trained TFT we produce a set of evaluation and interpretability outputs, all reported in Chapter~\ref{chap:experiments}.
+
+\textbf{Performance against a persistence baseline.} The headline performance measure is not the raw validation loss. The two instances are trained with different loss functions on different splits and horizons, so their loss values are not directly comparable (Section~\ref{sec:phase-comparison}). Instead, forecasts are scored by mean absolute error (MAE) against a persistence baseline, the naive forecast that carries the current value forward to the target horizon ($\hat{y}_{t+k} = y_t$), a standard reference for financial time series. The reported quantity is the percentage reduction in MAE over persistence, which normalizes for the differing difficulty of each target and horizon. For TFT v2 these metrics are computed for every target (\texttt{log\_volume}, \texttt{amihud}, \texttt{price\_range}) and horizon (1, 3, 6, 12 hours) on four slices: the validation set, the full test set, and the pre-war and war portions of the test set, split at the Iran war onset (Section~\ref{sec:phase2-data}). The pre-war and war slices measure how the pre-war-trained model generalizes across the regime boundary.
+
+\textbf{Interpretability.} Two interpretability outputs are read directly off each model, both averaged over the evaluation set: the Variable Selection Network feature-importance ranking, showing which inputs the model relied on most, and the multi-head attention weights, giving a per-lag map of which historical hours the model attended to.
+
+\textbf{Research-question diagnostics.} The attention output is of particular interest for RQ1: if the TFT attention peaks at a lag consistent with the lag OLS result of Phase~1, the two analyses corroborate one another from very different starting points, the OLS detecting a structured lag effect from a sequence of single-lag linear specifications and the TFT learning a single nonlinear function over the full history while exposing the same structure through attention. For RQ2 we run a directional asymmetry test on the forecasts: hours are split by the sign of their sentiment score into bearish and bullish groups, and a Welch t-test compares the mean predicted \texttt{log\_volume} of the two groups at each horizon and slice. This is deliberately a different estimand from the lag OLS coefficient comparison, since it contrasts the average level of predicted volume across two groups of hours rather than the marginal sensitivity of volume to sentiment, and Section~\ref{sec:asymmetry} reads the two together with that distinction in mind.
+
+\section{Inter-model calibration methodology}\label{sec:calibration-methods}
+
+The Haiku-extracted feature set described in Section~\ref{sec:feature-extraction} is the substrate of all Phase~2 modeling. Before relying on it for downstream analysis, we need an external check that the extraction is producing sensible outputs and that the LLM is not systematically biased on the cases that matter most. This section describes the methodology for that external validation. The specific calibration results, and the methodological refinement that the calibration motivated, are reported in Chapter~\ref{chap:experiments} (Sections~\ref{sec:calibration} and~\ref{sec:tft-v1}).
+
+\subsection{The validation problem and our approach}\label{sec:validation-problem}
+
+The standard approach to validating an NLP extraction is to compare model output against human-annotated ground truth on a labelled subset of the data. For this thesis, that approach is not feasible. Human annotation of WTI-relevant news articles requires domain expertise in oil markets and trading that the author does not possess, and a single non-expert annotator working at scale would introduce noise of unknown structure into the validation set rather than reduce it. Recruiting a third-party expert at scale was outside the resource scope of the project.
+
+We adopt instead an inter-model calibration approach, building on evidence that large language models are competent annotators in place of human labels \citep{gilardi2023} and can act as judges of other models' output \citep{zheng2023}: the same articles, with the same extraction prompt and tool schema, are scored by Claude Haiku 4.5 and by a GPT-family reference model (OpenAI's GPT-5.5, via the ChatGPT interface). Disagreement between two models from different developer families on the same input is informative in a different way than human disagreement, but is informative nonetheless. The argument for treating it as a useful validation signal is the following.
+
+Each model encodes its own implicit notion of news interpretation, shaped by its training data, its alignment procedure, and the family-level inductive biases of its developer. The two models share little in their training data composition or alignment style. When they agree on an extraction, that agreement reflects content that is robust to two independently-trained interpretations of financial news. When they disagree, the disagreement points to either genuine ambiguity in the article or to a systematic bias in one of the models.
+
+This approach is acknowledged as methodologically weaker than expert-annotated ground truth: two models agreeing on a wrong reading would not be detected by the comparison. The limitation is reported as part of the discussion in Chapter~\ref{chap:discussion}. It is, however, methodologically stronger than no external validation, and the cross-family choice maximises the diversity of the comparison within the constraint that both annotators are LLM-based.
+
+\subsection{Sample design}\label{sec:calibration-sample}
+
+The calibration sample is constructed by stratified random sampling from the full Phase~2 corpus. The strata reflect the regex-based body validity classification used in Phase~1, with three bucket categories:
+
+\begin{itemize}
+  \item \textbf{valid}: articles passing the regex \texttt{body\_valid=1} filter (Section~\ref{sec:regex-filter})
+  \item \textbf{invalid\_substantial}: articles failing \texttt{body\_valid=1} but whose body field still contains substantial text content (length above a minimum threshold)
+  \item \textbf{invalid\_weak}: articles failing \texttt{body\_valid=1} with bodies short enough to be likely scraping artefacts
+\end{itemize}
+
+From each of these three strata, ten articles are sampled uniformly at random, producing a total calibration sample of thirty articles. The stratification ensures that the calibration covers the full range of content the LLM might encounter in production, including the marginal cases where the regex filter and the LLM are most likely to disagree.
+
+\subsection{Extraction procedure}\label{sec:calibration-procedure}
+
+The same system prompt and tool schema (Appendix~\ref{app:prompt}) are submitted to both models for each of the thirty articles. For Claude Haiku, this is the production extraction code described in Section~\ref{sec:schema}. For the GPT reference, the prompt and schema are submitted via the ChatGPT interface with manual JSON output extraction.
+
+The two output sets are then aligned by article identifier and compared field by field. The comparison computes agreement metrics symmetrically: no metric depends on which model is treated as the reference.
+
+\subsection{Agreement metrics}\label{sec:calibration-metrics}
+
+For each field in the schema, we compute one or more of the following agreement measures, chosen to match the field's type:
+
+\begin{itemize}
+  \item For binary fields (\texttt{usable}): agreement rate as a count out of thirty, and Cohen's kappa to correct for chance agreement
+  \item For continuous fields (\texttt{sentiment\_score}, \texttt{supply\_impact}, \texttt{demand\_impact}, \texttt{risk\_premium}, \texttt{magnitude}, \texttt{certainty}): Pearson correlation across all pairs, mean absolute difference (MAD), and the count of \textbf{sign disagreements}, defined as cases where the two models' scores have opposite signs (one positive, one negative). Near-zero scores within a small range around zero are treated as agreement on neutrality and do not contribute to the sign-disagreement count.
+  \item For categorical fields (\texttt{event\_type}, \texttt{time\_horizon}): exact-match agreement rate, and for the array-valued \texttt{event\_type}, the proportion of cases where the top-ranked category from one model appears anywhere in the other model's list
+\end{itemize}
+
+The sign-disagreement count for continuous fields is the most methodologically important measure. A small mean absolute difference can mask cases where the two models disagree on the qualitative direction of an effect (one rates an event bullish, the other bearish), which is precisely the kind of disagreement that would propagate as noise into downstream models. The sign-disagreement count surfaces these cases explicitly.
+
+\subsection{Use of the calibration outcome}\label{sec:calibration-use}
+
+The calibration sample is small ($n = 30$) by deliberate design: a larger sample would have proportionally larger annotation cost on the GPT side, and the goal is to detect qualitative patterns of agreement and disagreement rather than to produce a precise estimate of population-level agreement rates. The thirty articles are enough to surface systematic disagreements, identify their character, and motivate either acceptance of the schema as-is or schema revision.
+
+In the event the calibration reveals significant disagreement on any field, the response is to investigate the source of the disagreement and revise the extraction prompt or schema accordingly, then re-run the calibration on the same thirty-article sample with the revised setup. This iterative loop is documented in Chapter~\ref{chap:experiments} (Section~\ref{sec:calibration} reports the first calibration result, and Section~\ref{sec:channel-response} reports the schema revision and re-runs the calibration with the revised schema). The use of the same thirty articles for both the initial and the revised calibration is intentional: it isolates the effect of the schema change from the effect of sample variation.
