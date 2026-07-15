@@ -50,4 +50,4 @@ __pycache__/
 .vscode
 
 # Presentation
-/05_reports/presentation*
+/05_reports/presentation*.vscode/
