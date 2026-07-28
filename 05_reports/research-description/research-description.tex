@@ -1,0 +1,86 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{natbib}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+\titlespacing*{\section}{0pt}{1.2em}{0.4em}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection.}{0.5em}{}
+\setlist[itemize]{noitemsep, topsep=0.2em, leftmargin=1.4em}
+\setlist[description]{noitemsep, topsep=0.2em, leftmargin=0em}
+
+\begin{document}
+
+\begin{center}
+  {\Large\bfseries News-Driven Liquidity in WTI Crude Oil Futures}\\[0.3em]
+  {\large Measuring the Lag and Directional Asymmetry of the News Response at Hourly Resolution}\\[0.8em]
+  {\normalsize Research topic and description}\\[0.8em]
+  {\large Enrique Favila Martinez}\\[0.2em]
+  {\normalsize 15 January 2026}
+\end{center}
+
+\vspace{0.5em}
+
+\section{Topic}
+
+This research studies how news propagates into the liquidity of WTI crude oil futures at hourly resolution. It asks two questions: how long the market takes to absorb a piece of news, and whether news implying a price fall moves liquidity differently than news implying a price rise. The work combines natural language processing, used to turn unstructured news text into numerical features, with time-series modelling of hourly market data.
+
+\section{Background and motivation}
+
+That news moves markets is well established. \citet{tetlock2007} showed that pessimism in the financial press predicts both downward price pressure and higher trading volume. The limitation of most of this literature is resolution: it works on daily data, which collapses a whole trading session into a single observation and averages away the window in which information actually reaches the market. The reaction to a scheduled release is concentrated within minutes to hours and then decays over the rest of the session \citep{ederington1993}, so a daily bar cannot say whether liquidity responds on impact, an hour later, or the following day.
+
+Oil is a useful place to close that gap, and there is a specific reason to expect the daily view to be misleading here. \citet{kilian_vega2011} found no compelling response of daily energy prices to daily U.S.\ macroeconomic news, consistent with energy prices being predetermined with respect to macro aggregates at that horizon. A null at daily frequency does not rule out an effect at a finer one. WTI additionally offers a well-dated event structure, namely OPEC policy decisions, geopolitics in the producing regions, the weekly EIA inventory release, and macroeconomic announcements, each arriving at a known time. Combined with the depth of the market, this makes an hourly study feasible.
+
+\section{Research questions}
+
+\begin{description}
+  \item[RQ1 (lag structure).] At what lag, if any, does news sentiment exert its strongest effect on WTI trading liquidity, measured at hourly resolution?
+  \item[RQ2 (directional asymmetry).] Does the liquidity response differ between bearish and bullish news, and if so, in what sense?
+\end{description}
+
+\section{Data}
+
+Three sources are combined onto a common hourly grid spanning roughly 24 months of trading:
+
+\begin{itemize}
+  \item \textbf{Market data.} Hourly OHLCV for the WTI front-month futures contract, plus the Dollar Index and the VIX as macro-financial controls. Liquidity is measured with three complementary quantities: log trading volume for raw activity, the Amihud illiquidity ratio \citep{amihud2002} for price impact, and the Parkinson high-low range \citep{parkinson1980} for intraday volatility.
+  \item \textbf{News.} Articles retrieved from the GDELT Project \citep{leetaru_schrodt2013}, a machine-monitored corpus of worldwide print, broadcast, and web coverage, filtered to WTI-relevant content.
+  \item \textbf{Scheduled events.} Weekly U.S.\ crude inventory releases from the Energy Information Administration.
+\end{itemize}
+
+Aligning these is a methodological problem in its own right, since articles publish at arbitrary times including overnight and at weekends, while trading happens on a fixed grid. Each article is therefore assigned to the next full trading hour, which guarantees that news strictly precedes the hour it is matched to and rules out attributing pre-publication price movement to post-publication news.
+
+\section{Methodology}
+
+The work proceeds in two phases, designed so that the second corroborates the first rather than replacing it.
+
+\textbf{Phase 1: an interpretable baseline.} News sentiment is extracted with FinBERT \citep{araci2019}, a transformer fine-tuned on financial text and the standard baseline in financial NLP. Lag-structured regressions then test whether sentiment published at a given hour predicts trading volume at subsequent hours, estimating separate coefficients for bearish and bullish sentiment so that the two are free to differ. This phase answers both research questions with classical statistics whose assumptions are transparent.
+
+\textbf{Phase 2: a richer representation and an expressive model.} FinBERT reduces an article to one of three sentiment classes, which discards information that is naturally continuous and multidimensional. Phase 2 replaces it with structured extraction by a large language model, which scores each article on separate supply, demand, and risk-premium channels. This mirrors the standard structural decomposition of oil-price shocks into supply, aggregate-demand, and precautionary components \citep{kilian2009}, and it matters because a single sentiment axis cannot represent an event that is negative in tone yet bullish for price, which is precisely what a supply threat is. These features feed a Temporal Fusion Transformer \citep{lim2021}, chosen because it is interpretable by construction: it exposes both which inputs it relies on and which past hours it attends to, so the lag structure can be read off the model rather than assumed.
+
+\textbf{Validation.} Expert human annotation of oil-market news is outside the resources of the project, so the LLM extraction is validated by inter-model agreement instead: the same articles are scored by two models from different developer families, and disagreement is treated as a signal of either genuine ambiguity or systematic bias. This rests on evidence that language models are competent annotators in place of human labels \citep{gilardi2023}. It is weaker than expert ground truth, since two models can share a blind spot, and the research reports it as such.
+
+\section{Expected contributions}
+
+\begin{itemize}
+  \item An empirical characterisation of the lag and directional asymmetry of the news-liquidity response for WTI at hourly resolution, recovered independently by a statistical baseline and by the attention pattern of a deep-learning forecaster.
+  \item A channel decomposition of LLM-extracted news features, validated by cross-model agreement, which separates the supply, demand, and risk implications an article carries instead of collapsing them onto one sentiment score.
+  \item A comparison of headline-only against full-body news representations, quantifying a bias that studies relying on titles alone inherit without measuring.
+  \item A methodological template pairing an interpretable baseline with a more expressive second stage, where neither is discarded and the second corroborates rather than supersedes the first.
+\end{itemize}
+
+\section{Scope and limitations}
+
+The study covers a single instrument, WTI crude oil futures, over roughly two years. Findings are not assumed to transfer to other commodities without replication, particularly since oil's geopolitical supply structure is what makes risk news price-bullish in the first place. The news corpus is drawn from a broad public aggregator rather than the institutional feeds professional traders consume, so the sentiment measured is that of publicly available news. The sample contains a structural break, which is informative for testing how a model generalises across regimes but means regime-specific results rest on a single episode.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

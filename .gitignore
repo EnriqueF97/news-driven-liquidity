@@ -32,6 +32,33 @@ __pycache__/
 *.synctex.gz
 *.fls
 *.fdb_latexmk
+# LaTeX — additional build artifacts (regenerated on every compile)
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*-blx.bib
+*.lof
+*.lot
+*.lol
+*.idx
+*.ind
+*.ilg
+*.glo
+*.gls
+*.glg
+*.glsdefs
+*.acn
+*.acr
+*.alg
+*.nav
+*.snm
+*.vrb
+*.brf
+*.dvi
+*.ps
+*.xdy
+*.pyg
 
 # Model checkpoints (too large for git)
 *.ckpt
