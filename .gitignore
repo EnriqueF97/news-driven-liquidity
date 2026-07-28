@@ -51,3 +51,6 @@ __pycache__/
 
 # Presentation
 /05_reports/presentation*.vscode/
+
+# Agent instructions — keep local, do not track
+/AGENTS.md
