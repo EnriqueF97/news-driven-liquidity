@@ -81,3 +81,6 @@ __pycache__/
 
 # Agent instructions — keep local, do not track
 /AGENTS.md
+
+# Node (marp-cli for building the slide decks)
+node_modules/
