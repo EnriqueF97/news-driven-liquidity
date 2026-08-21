@@ -92,6 +92,61 @@ Tests whether sentiment from the headline alone differs from sentiment of the fu
 - **On the tiny R2 (be ready for this):** R2 < 0.003 throughout. This is expected and _not_ a weakness: hourly volume is driven by many simultaneous forces (macro releases, positioning, options expiry, time-of-day), and sentiment is one signal among many. R2 measures how much of _total_ volume variance sentiment captures, not how much of _news-driven_ volume it captures. The finding is the _structured, replicable coefficient pattern across lags_, not the explained variance.
 - Coefficient interpretation: continuous coefficients are on the probability scale, so 0.342 is the effect of a _maximally confident_ bearish article (P(neg)=1) versus a neutral one: `exp(0.342)-1 ~ 41%` higher volume at +6h. Typical articles imply proportionally less.
 
+### 4.4b Reading a lag coefficient - full walkthrough (study this one)
+
+**What the coefficient actually is.** In `log_volume_{t+k} = b0 + b1*P(neg)_t + b2*P(pos)_t + e`, the number `b1` is a **slope**: how much the outcome moves when the regressor moves by one unit, holding the other regressor fixed. It is not a correlation, not a probability, and not a percentage on its own.
+
+Three facts fix its meaning:
+
+1. **The regressor runs 0 to 1.** `P(neg)` is a probability, so "one unit" means going from *no bearish tone at all* to *maximum bearish confidence*. That is the full range, not a small nudge. So `b1` is the effect of the most extreme article the model can produce, which is why it looks large.
+2. **The outcome is logged.** `log_volume`, not volume. So a coefficient is roughly a *proportional* change, and you convert with `exp(b) - 1`.
+3. **The baseline is a neutral article.** `P(neu)` is deliberately left out of the equation. The three probabilities sum to 1, so including all three plus an intercept would be perfectly collinear and unsolvable (the same trap as including every dummy category). Dropping neutral makes it the reference point, so every coefficient reads as *"versus a fully neutral article"*.
+
+**Worked example, the +6h peak.** `b_neg = 0.342`.
+
+- Literal reading: an article with `P(neg) = 1` is associated with `log_volume` 0.342 higher, six hours later, than a fully neutral article.
+- Converted: `exp(0.342) - 1 = 0.408`, so about **41% more volume**.
+- **Realistic reading:** almost no article scores 1.0. A fairly confident article at `P(neg) = 0.6` gets `0.6 x 0.342 = 0.205`, i.e. `exp(0.205) - 1 = 23%` more volume. The relationship is linear in the probability, so you scale the coefficient by the actual score.
+
+Do not quote the 41% without saying it is the maximum-confidence case. That is the single easiest thing to be caught overstating.
+
+**Why the log matters.** For small coefficients `exp(b) - 1` is almost exactly `b` (lag 8: b = 0.056, effect = 5.8%). The gap only opens up as the coefficient grows (lag 6: b = 0.342, effect = 40.8%, not 34.2%). If you say "a 0.342 coefficient means 34% more volume" you are wrong by 7 points.
+
+**The whole table converted to plain volume terms:**
+
+| Lag | b_neg | bearish effect | b_pos | bullish effect | significant? |
+| ---: | ---: | ---: | ---: | ---: | :--- |
+| 0 | 0.186 | +20.4% | 0.166 | +18.1% | both yes |
+| 1 | 0.262 | +30.0% | 0.200 | +22.1% | both yes |
+| 2 | 0.105 | +11.1% | 0.114 | +12.1% | neither |
+| 3 | 0.117 | +12.4% | 0.170 | +18.5% | both yes |
+| 4 | 0.267 | +30.6% | 0.237 | +26.7% | both yes |
+| **6** | **0.342** | **+40.8%** | **0.291** | **+33.8%** | both yes |
+| 8 | 0.056 | +5.8% | 0.101 | +10.6% | neither |
+| 12 | 0.001 | +0.1% | -0.171 | **-15.7%** | bullish only |
+
+**How to narrate the shape.** The effect is present immediately (+20% at publication), jumps at +1h, sags through +2h and +3h, climbs again to +4h, peaks hard at **+6h**, and is gone by +8h. It is *not* a smooth decay. Two honest readings, and you should offer the first:
+
+- **Cautious:** with R2 this small and only eight lags, the dip at +2h/+3h may be noise. What is solid is that the effect is large and significant early, largest at +6h, and absent by +8h.
+- **Speculative:** the twin peaks at +1h and +4h to +6h could reflect two different reactions, an immediate algorithmic one and a slower discretionary one. Offer this only if asked, and label it as speculation.
+
+**What the p-values say.** Each p is the probability of seeing a coefficient this large *if the true effect were zero*. Two cautions. First, you ran 16 tests (8 lags x 2 coefficients); at p < 0.05 you would expect roughly one false positive by chance. Your defence is not any single p but the *pattern*: several adjacent lags significant, with coherent magnitudes. Second, p tells you nothing about size. Lag 3 is significant and small; that is normal with ~11,000 observations, where tiny effects clear the threshold easily.
+
+**What R2 says, and does not.** R2 < 0.003 means sentiment explains under 0.3% of the *total* variance in hourly volume. That is expected: volume is dominated by time of day, session, scheduled releases, and positioning. R2 answers "how much of all volume movement does news explain" (almost none) and not "does news move volume" (yes, measurably). The claim rests on the coefficient pattern, not on fit.
+
+**The bearish-versus-bullish comparison, stated carefully.** At the peak, `0.342 / 0.291 = 1.175`, so the bearish coefficient is about **18% larger** than the bullish one. Same ordering at lags 0, 1 and 4.
+
+Now the weakness you should know before someone finds it: **the thesis compares the two coefficients descriptively, it does not formally test that they differ.** A proper test would be a Wald or F test of `b1 - b2 = 0` on the joint covariance. Without it, "bearish exceeds bullish" is an observed ordering, not an established inequality, and overlapping confidence intervals would not settle it either way. If asked, say exactly that: the ordering is consistent across the four lags that carry the effect, which is suggestive, but a formal equality test was not run. Do not claim statistical significance for the *difference*.
+
+**Two rows that invite awkward questions:**
+
+- **Lag 3.** Both coefficients are significant (p = 0.047 and 0.013) and bullish is *higher* (0.170 vs 0.117). This is the genuine exception to RQ2 and it is visible on the plot, so name it before you are asked. The honest line: the ordering holds at the four lags carrying the largest effects, and reverses at one weak lag.
+- **Lag 12 bullish, -0.171, p = 0.029.** A maximally confident bullish article is associated with about **16% less** volume twelve hours later, and it is significant. There is no strong story for this and you should not invent one. Say it is a single isolated coefficient at the edge of the tested range, with bearish flat at 0.001 there, and that it is not part of any pattern the analysis relies on. Reaching for an explanation here is riskier than admitting you do not have one.
+
+**Standard errors.** Estimated with the default formula, treating the data as a cross-section of articles. No HAC or clustered correction was applied. If articles published close together share unobserved shocks, the true uncertainty is wider than reported, so p-values are optimistic. The pattern is robust to moderately wider intervals; individual borderline lags (2, 3, 8) are not.
+
+**One-sentence version to memorise:** *"At +6h, a maximally confident bearish article is associated with about 41% higher trading volume than a neutral one; the effect is significant, peaks there, and disappears by +8h."*
+
 ### 4.5 VAR (kept only as a brief mention)
 
 - A vector autoregression was fitted as an exploratory joint model of sentiment and volume, then **abandoned**.

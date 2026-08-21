@@ -61,7 +61,7 @@ energy market outlook
 crude oil WTI price
 \end{lstlisting}
 
-The Phase~1 scrape returned 51{,}948 raw article records over the March 2024 to February 2026 window. Deduplication and English-only filtering cut that to 16{,}326 unique articles. To get body content we HTTP-fetched each URL and parsed the page. The failures clustered on paywalled domains, Cloudflare-protected sources, and pages that need JavaScript to render. An allow-list heuristic regex function (Section~\ref{sec:filtering}) then judged 7{,}756 of the retrieved bodies to be substantive. Phase~1 analyses ran on a combined set of 13{,}690 articles: 7{,}756 with valid bodies going into title-plus-body sentiment extraction, plus 5{,}934 where the body fetch failed and we kept the title alone as a fallback.
+The Phase~1 scrape returned 51{,}948 raw article records over the March 2024 to February 2026 window. Deduplication and English-only filtering cut that to 16{,}326 unique articles. To get body content we HTTP-fetched each URL and parsed the page. The failures clustered on paywalled domains, Cloudflare-protected sources, and pages that need JavaScript to render. An allow-list heuristic regex function (Section~\ref{sec:filtering}) then judged 7{,}755 of the retrieved bodies to be substantive. Phase~1 analyses ran on a combined set of 13{,}690 articles: 7{,}755 with valid bodies going into title-plus-body sentiment extraction, plus 5{,}935 where the body fetch failed and we kept the title alone as a fallback.
 
 For Phase~2 we widened the query set to catch the geopolitical and demand-side themes that dominated the post-war coverage period (Section~\ref{sec:phase2-data}):
 
@@ -190,7 +190,7 @@ The Phase~1 filter, \texttt{body\_valid}, is an allow-list run over the article 
   \item An all-caps ratio below 30\%, computed over words of more than two characters in texts containing more than ten words (excluding scraped pages that are predominantly menu links, category headers, or stock-ticker listings)
 \end{itemize}
 
-The filter grew over the early part of the project. It started as a deny-list of known bad phrases (Cloudflare error text, cookie notices) and turned into the allow-list above. On the Phase~1 corpus of 16{,}326 articles with English text and a successful body fetch, it passed 7{,}756 articles (47.5\%). The rest were either kept with title-only sentiment as a fallback or dropped from the analysis, depending on the notebook. Section~\ref{sec:phase1-data} spells out which analyses used which subset.
+The filter grew over the early part of the project. It started as a deny-list of known bad phrases (Cloudflare error text, cookie notices) and turned into the allow-list above. On the Phase~1 corpus of 16{,}326 articles with English text and a successful body fetch, it passed 7{,}755 articles (47.5\%). The rest were either kept with title-only sentiment as a fallback or dropped from the analysis, depending on the notebook. Section~\ref{sec:phase1-data} spells out which analyses used which subset.
 
 The regex filter is fast, reproducible, and transparent, in the sense that anyone can read the rules and predict what they will do to a given article. Inspection also made its limits obvious. Some articles passed while being mostly boilerplate, long disclaimers or repeated company descriptions that happened to mention energy keywords. Others failed while carrying legitimate analyst commentary, either because the body came in just under the 400-character threshold or because the vocabulary did not line up closely enough with the energy keyword list.
 

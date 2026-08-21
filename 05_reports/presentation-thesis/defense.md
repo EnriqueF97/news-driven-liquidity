@@ -30,7 +30,7 @@ style: |
     /* top padding clears the fixed header band + the card's inner inset,
        so body content always begins at the same y no matter how long
        the title is */
-    padding: 212px 85px 92px 85px;
+    padding: 180px 85px 80px 85px;
     /* Marp's base theme sets `place-content: safe center center`, which
        modern Chrome applies to block containers too and would float the
        body vertically. Pin it to the top so every slide starts level. */
@@ -38,8 +38,8 @@ style: |
     background-color: var(--ru-grey);
     background-image: url('assets/ru-logo-red.png'), linear-gradient(#FFFFFF, #FFFFFF);
     background-repeat: no-repeat, no-repeat;
-    background-position: bottom 20px center, 85px 176px;
-    background-size: 165px auto, calc(100% - 170px) calc(100% - 254px);
+    background-position: bottom 20px center, 85px 150px;
+    background-size: 165px auto, calc(100% - 170px) calc(100% - 216px);
   }
 
   /* Marp centres section content vertically by default, which makes the
@@ -54,11 +54,11 @@ style: |
      the card. Room for two lines before the card edge. */
   section:not(.cover):not(.section) > h2 {
     position: absolute;
-    top: 58px; left: 85px; right: 85px;
+    top: 44px; left: 85px; right: 85px;
   }
   section:not(.cover):not(.section) > h1 {
     position: absolute;
-    top: 86px; left: 85px; right: 85px;
+    top: 70px; left: 85px; right: 85px;
   }
 
   /* body sits inside the white card */
@@ -214,7 +214,7 @@ style: |
 <!-- _class: cover -->
 <!-- _paginate: false -->
 
-# News-Driven Liquidity Dynamics in WTI Crude Oil Futures
+# News-Driven Liquidity Dynamics in WTI Crude Oil Futures: A Channel Decomposition Approach
 
 <div class="meta">
 
@@ -231,32 +231,36 @@ Radboud University, Faculty of Science
 
 ## NEWS AND MARKETS
 
-# THE RESOLUTION GAP
+# THE MOTIVATION
 
 **News moves markets. The open question is when.**
 
-- Media sentiment predicts price pressure and trading volume (Tetlock, 2007), but almost all of that work is at **daily** resolution.
-- The reaction to a release is concentrated within **minutes to hours** (Ederington & Lee, 1993). A daily bar averages that away.
-- WTI is a good place to look: OPEC policy, geopolitics, the weekly EIA release and macro announcements all arrive at a **known** time, in a deeply liquid market.
-- Kilian & Vega (2011) find **no** response of daily energy prices to daily macro news.
+- Most media sentiment predicts price pressure and trading volume at **daily** resolution.
+- The reaction to a release is concentrated within **minutes to hours**. _A daily bar averages that away._
 
-**A null at daily frequency does not rule out an effect at hourly frequency.**
+**Why WTI?**
+
+- **Superb news coverage.**
+  - EIA inventories every Wednesday 10:30 ET
+  - OPEC+ decisions
+  - macro releases.
+- **Deep enough to measure hourly.** Real volume in every trading hour, so an hourly liquidity measure is signal rather than noise.
 
 ---
 
 ## RESEARCH QUESTIONS
 
-# WHAT WE ASK
+# WHAT WE WANT TO KNOW
 
 ### RQ1. Lag structure
 
-At what lag, if any, does news sentiment exert its strongest effect on WTI trading liquidity?
+At what lag does news sentiment exert its **strongest** effect on WTI trading liquidity?
 
 ### RQ2. Directional asymmetry
 
-Does the liquidity response differ between bearish and bullish news, and if so, in what sense?
+Does the liquidity response differ between bearish and bullish news?
 
-Liquidity is measured by **log trading volume** (activity), the **Amihud ratio** (price impact), and the **Parkinson range** (volatility). Two phases answer these: an interpretable baseline, then a richer model that corroborates it.
+_Liquidity_ is measured by **log trading volume** (activity), the **Amihud ratio** (price impact), and the **Parkinson range** (volatility).
 
 ---
 
@@ -264,26 +268,89 @@ Liquidity is measured by **log trading volume** (activity), the **Amihud ratio**
 
 ## PHASE 1
 
-# An interpretable baseline
+# AN INTERPRETABLE BASELINE
 
 ---
 
 ## PHASE 1 · DATA
 
-# THE DATA COLLECTED
+# THE MARKET DATA
 
-**News from GDELT, market data from Yahoo Finance, on a common hourly grid.**
+**Hourly: Open, High, Low and Close price of each hour, plus the Volume traded, from Yahoo Finance**
 
-| Stage                                            | Articles   |
-| ------------------------------------------------ | ---------- |
-| Raw GDELT records, eight oil-market queries      | 51,948     |
-| After deduplication and English filter           | 16,326     |
-| Body retrieved (~80% success) and regex-filtered | 7,756      |
-| Title-only fallback where the body failed        | 5,934      |
-| **Phase 1 modelling set**                        | **13,690** |
+<div class="cols">
+<div class="col">
 
-- Filter used here is regex with a set of words plus minimum text length
-- Window: March 2024 to February 2026, against **11,219** hourly WTI records.
+**What we pull**
+
+- `CL=F`: WTI front-month futures
+- `DX-Y.NYB`: US Dollar Index
+- `^VIX`: CBOE Volatility Index
+
+_DXY and VIX enter as controls in Phase 2._
+
+</div>
+<div class="col">
+
+| From      | We derive               | Measures     |
+| --------- | ----------------------- | ------------ |
+| Volume    | `log_volume`            | **activity** |
+| High, Low | `price_range`           | volatility   |
+| Close     | `log_return` → `amihud` | price impact |
+
+_Open is never used._
+
+</div>
+</div>
+
+</br>
+
+- `log_volume` counts how much was traded, so it measures raw activity.
+- `amihud` divides the size of the price move by the volume behind it, so it measures how hard the price is to push: a small move on heavy trading means a liquid hour.
+- `price_range` is the high-to-low spread within the hour, a fast proxy for volatility. Together they capture activity, price impact and volatility.
+
+---
+
+## PHASE 1 · DATA
+
+# THE NEWS DATA
+
+**News from GDELT from March 2024 - March 2026.**
+
+<div class="cols">
+<div class="col">
+
+| News Stage                     | Articles   |
+| ------------------------------ | ---------- |
+| Raw GDELT records              | 51,948     |
+| After dedup and English filter | 16,326     |
+| Substantive bodies             | 7,755      |
+| Title-only fallback            | 5,935      |
+| **Phase 1 modelling set**      | **13,690** |
+
+</div>
+<div class="col">
+
+**The eight queries**
+
+```text
+crude oil market
+OPEC production cut
+oil supply demand
+petroleum inventory
+Brent crude price
+oil inventory report
+energy market outlook
+crude oil WTI price
+```
+
+</div>
+</div>
+
+</br>
+
+- Regex filter: keyword list plus a minimum length.
+- March 2024 to March 2026, aligned to **11,219** hourly WTI records.
 
 ---
 
@@ -291,29 +358,56 @@ Liquidity is measured by **log trading volume** (activity), the **Amihud ratio**
 
 # HOW FINBERT PROCESSED THESE ARTICLES
 
-**FinBERT is a BERT variant fine-tuned on 339,750 individual corporate and financial documents.
-It is applied to the articles only, never to market data.**
+**Each article is scored twice: on the title alone, then on the title plus body.**
 
-- Each article is scored **twice**: on the **title alone**, and on the **title plus body** (truncated to 512 tokens, title kept at the front).
-- The model returns three class probabilities per article: _P(positive), P(neutral), P(negative)._
-- **We keep the probabilities, not the argmax label:** a 0.95-bearish article should not count the same as a 0.51-bearish one.
+<div class="cols">
+<div class="col">
 
-One real article, _"Oil up 4pc for the week after solid demand forecasts"_:
+- **BERT fine-tuned on financial text** (Araci, 2019), the de facto baseline in financial NLP.
+- Domain-adapted, so it reads financial language better than general-purpose sentiment tools.
+- Fine-tuned on **339,750** corporate and financial documents.
+- Returns three probabilities per article:
+  _P(pos), P(neu), P(neg)_.
 
-| Input        | P(positive) | P(neutral) | P(negative) | Label    |
-| ------------ | ----------- | ---------- | ----------- | -------- |
-| Title only   | **0.93**    | 0.03       | 0.03        | positive |
-| Title + body | 0.02        | 0.01       | **0.97**    | negative |
+- FinBERT scores **tone**, not price direction.
+
+</div>
+<div class="col">
+
+**Processing title vs title + body gave different results**
+_"Oil up 4pc for the week after solid demand forecasts"_
+
+| Input        | P(pos)   | P(neu) | P(neg)   |
+| ------------ | -------- | ------ | -------- |
+| Title only   | **0.93** | 0.03   | 0.03     |
+| Title + body | 0.02     | 0.01   | **0.97** |
+
+This is one of the most radical cases that motivates the headline bias experiment.
+
+</div>
+</div>
 
 ---
 
-## PHASE 1 · A NON RELATED CONTRIBUTION
+## PHASE 1 · A SIDE EXPERIMENT
 
 # HEADLINE BIAS: TITLES ARE NOT ARTICLES
 
-![w:600](assets/headline_bias_divergence_magnitude.png)
+**Where each title label ends up once the body is read** (7,755 articles with a body):
 
-Scoring the same article twice isolates the input: **41.6%** of articles flip label, and the mean signed shift is **−0.09**. Headlines lean _more bullish_ than the articles beneath them. For phase 1, title and title + body articles are considered.
+| Title label      | → positive  | → neutral | → negative    |
+| ---------------- | ----------- | --------- | ------------- |
+| positive (2,427) | 1,437 (59%) | 264 (11%) | **726 (30%)** |
+| neutral (2,257)  | 676 (30%)   | 688 (31%) | **893 (40%)** |
+| negative (3,071) | 500 (16%)   | 169 (6%)  | 2,402 (78%)   |
+
+</br>
+
+**3,228 articles (41.6%) change label**, and the movement is one-directional: positive and neutral titles leak into negative far more than negative titles leak out.
+
+In short, **a headline reads more positive than the article it introduces.**
+
+For phase 1, I decided to use the whole set of news, accepting this trade-off, since it serves as a guide that leads to phase 2.
 
 ---
 
@@ -323,9 +417,42 @@ Scoring the same article twice isolates the input: **41.6%** of articles flip la
 
 **News publishes at any hour. Trading does not.**
 
-- **Ceiling rule.** An article at 14:23 is assigned to the **15:00** bar, never 14:00. The 14:00 bar was already forming before the news existed, so using it would let news explain a candle that predates it.
-- **Forward-assignment.** Off-hours news (overnight, weekends, OPEC announcements) are carried to the next available trading hour rather than dropped. It is the most market-moving subset of the corpus.
-- The gap between publication and assigned hour is kept as a control, separating _contemporaneous news (< 2h)_ from _forward-assigned news (≥ 2h)_.
+<div class="cols">
+<div class="col">
+
+**Ceiling rule**
+
+| 13:00 |    14:00     |    15:00     | 16:00 |
+| :---: | :----------: | :----------: | :---: |
+|       | news 14:23 → | **assigned** |       |
+
+_The 14:00 bar was already forming before the news existed._
+
+</div>
+<div class="col">
+
+**Forward-assignment**
+
+| Sat 11:40 | weekend |  Sun 22:00   |
+| :-------: | :-----: | :----------: |
+|  news →   | closed  | **assigned** |
+
+_Off-hours news waits for the reopen instead of being dropped._
+
+</div>
+</div>
+
+<div class="cols">
+<div class="col">
+
+**Total of articles aligned: 13690**
+| Publication-to-hour gap | Articles | Share |
+| ----------------------- | -------- | --------- |
+| contemporaneous (< 2h) | 11,316 | **82.7%** |
+| forward-assigned (≥ 2h) | 2,374 | 17.3% |
+
+</div>
+</div>
 
 ---
 
@@ -333,14 +460,35 @@ Scoring the same article twice isolates the input: **41.6%** of articles flip la
 
 # ORDINARY LEAST SQUARES (OLS)
 
-A regressional model was used for phase 1:
+**Article text → FinBERT → Softmax over three classes → Two of the three become the regressors**
 
 $$\mathrm{log\ volume}_{t+k} = \beta_0 + \beta_1 P(\mathrm{neg})_t + \beta_2 P(\mathrm{pos})_t + \varepsilon_t$$
 
-- **Why ordinary least squares.** Nothing to tune and nothing to overfit: each $\beta$ reads directly as the volume response to a maximally confident article. Neutral is the omitted reference, since the three probabilities sum to one.
-- **Two coefficients, not one signed score.** A single signed regressor would force $\beta_1 = -\beta_2$, assuming the response is symmetric. Whether it is symmetric is exactly RQ2.
-- **One regression per lag,** $k \in \{0,1,2,3,4,6,8,12\}$, traces the effect over time. If news propagates with delay, the coefficients should **rise to a peak, then decay**, which is exactly what we need for RQ1.
-- **What it cannot do.** $R^2$ will be small: news is _one driver_ of hourly volume among many. The finding is the _pattern_ across lags, not the fully explained variance.
+<div class="cols">
+<div class="col">
+
+| Term                    | Definition                             |
+| ----------------------- | -------------------------------------- |
+| `log_volume` at t+k     | what we predict, k hours later         |
+| `P(neg)`, `P(pos)` at t | FinBERT softmax scores at publication  |
+| β₁, β₂                  | **the answer** we read off             |
+| β₀                      | fitted intercept: a fully neutral hour |
+| ε                       | everything else moving volume          |
+
+News is one driver of hourly volume among **many**, and here we are not chasing predictive power.
+The finding is the **shape across lags**.
+
+</div>
+<div class="col">
+
+**Three design choices**
+
+- **Keep the probabilities.** A 0.95-bearish article should count for more than a 0.51-bearish one.
+- **One coefficient per direction (β₁, β₂).** A single sentiment score would force bearish and bullish to have equal and opposite effects. In reality both raise volume, by different amounts, and that difference is what RQ2 measures.
+- **One regression per lag.** Eight separate fits, k ∈ {0, 1, 2, 3, 4, 6, 8, 12}, so we can watch the effect rise and fade.
+
+</div>
+</div>
 
 ---
 
@@ -348,22 +496,47 @@ $$\mathrm{log\ volume}_{t+k} = \beta_0 + \beta_1 P(\mathrm{neg})_t + \beta_2 P(\
 
 # THE RESPONSE PEAKS AT +6 HOURS
 
-![w:800](assets/lag_coefficients.png)
+<div class="cols">
+<div class="col">
 
-**RQ1:** the effect builds, peaks sharply at **+6h** (≈ 41% more volume than a neutral hour), and decays to insignificance by +8h. **RQ2:** bearish exceeds bullish at the dominant lags (0, +1h, +4h, +6h), by ≈ 18% at the peak. The exception is the weak +3h lag, where both coefficients are small and bullish is marginally higher.
+![w:470](assets/lag_coefficients_left.png)
+
+</div>
+<div class="col">
+
+**RQ1 · The lag**
+
+Builds from publication `t = 0`, peaks sharply at **+6h**, gone by +8h.
+
+Peak β = 0.342. Volume is logged, so the effect is e^β − 1 ≈ **41% more volume** than a neutral hour.
+
+**RQ2 · Asymmetry**
+
+Bearish sits above bullish at 0, +1h, +4h and +6h, by ≈ **18%** at the peak. Exception: +3h, where both are small and bullish is slightly higher.
+
+A coefficient **below zero** means _less_ volume than a neutral hour. The bullish line drops there at +12h (≈ 16% less), an isolated point the findings do not rest on.
+
+</div>
+</div>
 
 ---
 
-## PHASE 1 · LIMITATIONs
+## PHASE 1 · LIMITATIONS
 
 # WHAT THIS BASELINE COULD NOT DO
 
-- **One sentiment axis.** Three classes, with no magnitude, event type, entities, or certainty.
-- **A lexical filter.** The regex accepted long off-topic text and rejected short substantive briefs.
-- **A sparse signal.** Over half of all hours carry no news; an exploratory VAR by consequence could not identify anything with significative precision and was abandoned.
-- **No macro controls** such as dollar and VIX, and **pre-war data only** (the corpus stopped in February 2026).
+</br>
 
-**Each of these drives a specific Phase 2 change.**
+- **One sentiment axis.** Three classes only: no magnitude, event type, entities or certainty. _News carry more information than sentiment._
+- **A lexical filter.** A regex filter that keeps long off-topic text and rejected short substantive news.
+- **A sparse, event-driven signal.** Roughly half of all hours carry no news. The regression works around that by looking at one article at a time, so it never learns from the market's own recent history.
+- **No macro controls.** Hourly volume moves for many reasons other than news.
+- **Pre-war data only.** The corpus stops at the war onset, 28 February 2026.
+
+</br>
+</br>
+
+**Each of these sets one task for Phase 2.**
 
 ---
 
@@ -377,16 +550,16 @@ $$\mathrm{log\ volume}_{t+k} = \beta_0 + \beta_1 P(\mathrm{neg})_t + \beta_2 P(\
 
 ## PHASE 2 · CHANGES NEEDED
 
-# TargetING limitations from previous phase
+# TARGETING LIMITATIONS FROM PHASE 1
 
-**Each limitation of the baseline sets one new task.**
+- **Get more data.** Extend the corpus past February 2026, and add macro controls so news is not carrying variance it never owned. Add existing conflict to the news corpus.
+  </br>
 
-- **Get more data.** Extend the corpus past February 2026, and add macro controls so news is not carrying variance it never owned.
-- **Extract richer features.** Replace three sentiment classes with a structured schema from an LLM.
-- **Calibrate that extraction.** With no human ground truth, check it across model families before trusting it.
+- **Extract richer features.** Replace three sentiment classes with a structured schema from a LLM.
+  </br>
+- **Calibrate that extraction.** Have a more reliable way to verify the content of the news. We have no human annotated ground truth.
+  </br>
 - **Change the model.** Sparse, event-driven news with many features and several horizons needs more than a single-lag regression.
-
-**The next slides take these in order.**
 
 ---
 
@@ -394,11 +567,35 @@ $$\mathrm{log\ volume}_{t+k} = \beta_0 + \beta_1 P(\mathrm{neg})_t + \beta_2 P(\
 
 # WHAT WE CHANGED ABOUT THE INPUTS
 
-**Three changes before any modelling.**
+<div class="cols">
+<div class="col">
 
-- **A bigger corpus.** Five new queries (Iran sanctions, Saudi production, China demand, Russia exports, supply disruption) and a re-scrape up to May 2026: **22,795 articles**, now spanning the 28 February 2026 making emphasis on war onset, huge factor on oil liquidity this year.
-- **Macro covariates.** Dollar Index (DXY) and Volatility Index (VIX) added as hourly controls. The Phase 1 regression explained under **0.3%** of volume variance, so letting the model absorb broad market movement leaves a cleaner residual for news.
-- **Richer news features**. Using an LLM to extract features of news, using a schema v1, cross-calibrating against other LLM, then creating the schema v2.
+| Changes         | Phase 1     | Phase 2             |
+| --------------- | ----------- | ------------------- |
+| Queries         | 8           | **13**              |
+| Unique articles | 16,326      | **22,795**          |
+| Window ends     | March 2026  | **May 2026**        |
+| War onset       | not covered | **inside the data** |
+| Macro controls  | none        | **DXY, VIX**        |
+
+</div>
+<div class="col">
+
+**The five new queries**
+
+```text
+Iran sanctions oil
+Saudi Arabia oil production
+China oil demand
+Russia oil exports
+oil supply disruption
+```
+
+</div>
+</div>
+
+- **Why macro controls.** Phase 1 explained under **0.3%** of hourly volume. Letting the model absorb broad market movement leaves a cleaner residual for news.
+- **Why the longer window.** The 28 February 2026 war onset now sits inside the data, which is what makes a regime test possible at all.
 
 ---
 
@@ -406,9 +603,11 @@ $$\mathrm{log\ volume}_{t+k} = \beta_0 + \beta_1 P(\mathrm{neg})_t + \beta_2 P(\
 
 # THE EXTRACTION SCHEMA
 
-Both extractions of _"Russian Sanctions Drive Oil Prices Higher"_, before and after the revision:
+**Detected:** one score, two judgments. _Good or bad news?_ vs _price up or down?_ On supply threats they point opposite ways.
 
-Three channels added. `price_direction` dropped as redundant, `event_type` now salience-ordered, `usable` now required (with _usable_strict_ used later).
+**Fixed:** three separate channels. `price_direction` dropped, `event_type` ordered, `usable` required.
+
+_"Russian Sanctions Drive Oil Prices Higher"_
 
 <div class="cols">
 <div class="col">
@@ -452,11 +651,11 @@ Three channels added. `price_direction` dropped as redundant, `event_type` now s
 
 ---
 
-## PHASE 2 · VALIDATION
+## PHASE 2 · DATA VALIDATION
 
-# THE COMPOSITE sentiment FAILED, SO WE DECOMPOSED IT
+# THE COMPOSITE SENTIMENT FAILED, SO WE DECOMPOSED IT
 
-**No human ground truth was available, so we validated by cross-model agreement: the same 30 articles scored by Claude's Haiku and by OpenAI's GPT-5.**
+**No human ground truth.** So: cross-model agreement. Same 30 articles, scored by Claude Haiku and by OpenAI GPT-5.
 
 | Metric                                             | v1 schema    | v2 schema          |
 | -------------------------------------------------- | ------------ | ------------------ |
@@ -464,50 +663,48 @@ Three channels added. `price_direction` dropped as redundant, `event_type` now s
 | Sign disagreements                                 | 4 / 13 (31%) | **1 / 14 (7%)**    |
 | `supply_impact` / `demand_impact` / `risk_premium` | —            | 0.94 / 0.96 / 0.82 |
 
-At r = 0.39 the disagreements concentrated on **geopolitical** events: one number was carrying two judgments, since a supply threat is bad news yet bullish for price. Splitting it into three channels (Kilian, 2009) fixed it, and **the composite improved without being modified.**
+**Where it broke:** geopolitical events, the highest-magnitude articles in the sample.
+
+**The surprise:** the composite improved from 0.39 to 0.88 **without being modified**.
+Decomposing first disciplines everything downstream.
 
 ---
 
-## PHASE 2 · TEMPORAL FUSION TRANSFORMER (TFT) MODEL
+## PHASE 2 · TEMPORAL FUSION TRANSFORMER (TFT)
 
-# CONFIGURING THE TRANSFORMER
+# SETTING THE INPUTS
 
-**Article-level features are aggregated to the hourly grid just as Phase 1, then passed to a Temporal Fusion Transformer.**
+**Why a TFT:** it learns nonlinear interactions a single-lag regression cannot, and it reports its own reasoning: which inputs it weighted, and which past hours it looked at. **Exactly what we need.**
 
-- **Why a TFT:** It learns nonlinear interactions across features that a single-lag regression cannot, and it reports its own reasoning: which inputs it weighted, and which past hours it attended to.
-- Continuous features are hour-averaged, entity flags take the maximum, categoricals the highest-magnitude article of the hour; news-free hours get `no_news`.
-- **71 canonical entity flags**, normalised so that "Tehran" and "Iranian" both map to "Iran", and "US" and "U.S." both map to "ent_us", entering as a binary vector per hour.
-- `event_type` and `time_horizon` as **learned embeddings** rather than integer codes.
-- **TFT v2:** After an ablation with different dataset configurations and architecture, we got our canonical model with a 48-hour encoder, three targets (`log_volume`, `amihud`, `price_range`), four horizons (+1, +3, +6, +12h), a 60/20/20 dataset split with the war onset **inside the test set**.
+<div class="cols">
+<div class="col">
 
----
+**Aggregating articles to the hourly grid**
 
-## PHASE 2 · RESULTS FOR RQ1
+- Continuous features: hour-averaged
+- Entity flags: maximum count
+- Categoricals: highest-magnitude article
+- Hours with no news: `no_news`
 
-# WHERE IN TIME THE MODEL LOOKS
+**71 canonical entity flags.** "Tehran" and "Iranian" both map to `ent_iran`.
 
-![w:720](assets/attention_tftv2.png)
+`event_type` and `time_horizon` as **learned embeddings**, not integer codes.
 
-Attention rises toward recency and peaks at **−1h**. Split by direction, **bearish-sentiment hours peak at −6h** while bullish peak at −1h: the same horizon the Phase 1 regression found, reached by an entirely different method.
+</div>
+<div class="col">
 
----
+**TFT v2, selected by ablation**
 
-## PHASE 2 · THE VARIABLE SELECTION NETWORK (VSN)
+|           |                                       |
+| --------- | ------------------------------------- |
+| Encoder   | 48 hours                              |
+| Targets   | `log_volume`, `amihud`, `price_range` |
+| Horizons  | +1, +3, +6, +12h                      |
+| Split     | 60 / 20 / 20                          |
+| War onset | inside the **test** set               |
 
-# WHAT THE MODEL PAYS MORE ATTENTION TO
-
-| Rank | Feature                                                           | Weight        |
-| ---- | ----------------------------------------------------------------- | ------------- |
-| 1    | `vix`                                                             | 0.188         |
-| 2    | `supply_impact`                                                   | 0.121         |
-| 3    | `ent_oman`                                                        | 0.113         |
-| 4    | `demand_impact`                                                   | 0.055         |
-| 6–10 | `ent_japan` · `ent_eu` · `ent_iran` · `ent_china` · `ent_algeria` | 0.017 – 0.014 |
-
-The following is the VSN weight list, which tells what entities the model values more when making predictions.
-**Six of the top ten are entity flags**, and they are economically interpretable: Oman and Iran around Hormuz, Japan, the EU and China as importers. The two channels together carry **17.6%**, comparable to VIX alone, while the composite `sentiment_score` does not appear at all, demonstrating that sentiment doesn't control liquidity.
-
-_Exact ranks shift on retraining. What was stable is the feature type: risk and salience over price direction._
+</div>
+</div>
 
 ---
 
@@ -515,29 +712,98 @@ _Exact ranks shift on retraining. What was stable is the feature type: risk and 
 
 # PREDICTION AGAINST A PERSISTENCE BASELINE
 
+**Persistance baseline:** hourly volume is strongly autocorrelated, so "assume nothing changes" is already a good forecast. Beating it means the model has learned more than inertia.
+
+<div class="cols">
+<div class="col">
+
+**Reduction vs persistence**
+
 | Target        | +1h  | +3h  | +6h  | +12h     |
 | ------------- | ---- | ---- | ---- | -------- |
 | `log_volume`  | +46% | +60% | +67% | **+71%** |
 | `amihud`      | +43% | +43% | +45% | +45%     |
 | `price_range` | −45% | −24% | −14% | −3%      |
 
-- Since this model is for financial forecasting, we can also use it for predicting the 3 targets.
-- Volume and Amihud beat persistence at every horizon, and the margin **grows with the horizon**.
-- `price_range` fails in the war regime; on the pre-war slice it matches persistence.
+</div>
+<div class="col">
 
-**Trained on moderate volatility, the model reverts to the mean in a regime it never saw. A clean regime-extrapolation failure.**
+**`log_volume` MAE, validation vs test**
 
-<div class="small">
+|      | val   | test  |
+| ---- | ----- | ----- |
+| +1h  | 0.530 | 0.585 |
+| +3h  | 0.534 | 0.577 |
+| +6h  | 0.542 | 0.602 |
+| +12h | 0.557 | 0.631 |
 
-Persistence is the naive forecast that carries the current value forward: the guess for hour t+k is simply the value at hour t. Every figure above is the reduction in mean absolute error against it, so +46% means the model's error is 46% smaller.
+</div>
+</div>
 
+**Works.** Volume and Amihud beat persistence at every horizon, and the margin **grows with the horizon**.
+
+**Fails.** `price_range`, but only in the war regime. Pre-war it **beats** persistence (0.15 against 0.18 to 0.28).
+
+**Why:** trained on moderate volatility, the model reverts to the mean in a regime it never saw. A clean regime-extrapolation failure.
+
+---
+
+## PHASE 2 · RESULTS FOR RQ1
+
+# WHERE IN TIME THE MODEL LOOKS
+
+<div style="text-align:center">
+
+![w:920](assets/attention_tftv2.png)
+
+</div>
+
+---
+
+## PHASE 2 · VARIABLE SELECTION NETWORK (VSN)
+
+# WHAT THE MODEL PAYS MORE ATTENTION TO
+
+<div class="cols">
+<div class="col">
+
+| #   | Feature           | Weight |
+| --- | ----------------- | ------ |
+| 1   | `vix`             | 0.188  |
+| 2   | `supply_impact`   | 0.121  |
+| 3   | `ent_oman`        | 0.113  |
+| 4   | `demand_impact`   | 0.055  |
+| 5   | `is_wednesday`    | 0.022  |
+| 6   | `ent_japan`       | 0.017  |
+| 7   | `ent_eu`          | 0.016  |
+| 8   | `ent_iran`        | 0.015  |
+| 9   | `ent_china`       | 0.014  |
+| 10  | `ent_algeria`     | 0.014  |
+| 21  | `sentiment_score` | 0.009  |
+
+</div>
+<div class="col">
+
+**Entities carry the block.** All 71 flags together hold **52%** of total importance, and six sit in the top ten.
+
+**Only four features lead individually.** VIX, supply, Oman, demand. Everything from rank 5 down is **≤ 0.022**.
+
+**Channels rival VIX.** Supply plus demand carry **17.6%**, against 18.8% for VIX alone.
+
+**Wednesday matters.** EIA inventory release day.
+
+**The composite sinks to 21st.** Decomposing sentiment showed what is more important.
+
+_Exact ranks shift on retraining. What was stable is the feature type: risk and salience over price direction._
+
+</div>
 </div>
 
 ---
 
 <!-- _class: section -->
 
-# Discussion, what we can learn from this?
+# What we can learn from this?
 
 ---
 
@@ -545,13 +811,34 @@ Persistence is the naive forecast that carries the current value forward: the gu
 
 # ANSWERING THE TWO RQS
 
-### RQ1. Settled, and settled twice
+<div class="cols">
+<div class="col">
 
-A single-lag linear regression and a 48-hour attention-based forecaster share no assumptions, and both place the response in the **+6 to +12 hour** window. The response is gradual, not instantaneous.
+### RQ1 · Settled twice
 
-### RQ2. Real, but it must be stated precisely
+**The response lands at +6 to +12h.**
 
-Phase 1 finds a robust bearish-over-bullish asymmetry in **marginal sensitivity**. Phase 2's sixteen tests of **average predicted volume** find nothing. These are different quantities, not a failed replication: a larger marginal sensitivity can coexist with equal group means. The model instead _relies_ on **risk and salience**, not _direction_.
+- Lag OLS peaks at **+6h**
+- TFT attention peaks at **−6h** for bearish
+- The two methods share no assumptions
+
+_Gradual, not instantaneous._
+
+</div>
+<div class="col">
+
+### RQ2 · Real, if stated precisely
+
+**Asymmetry is marginal, not average.**
+
+- Phase 1: bearish sensitivity **>** bullish
+- Phase 2: 16 tests of mean volume, **null**
+- Different quantities, not a failed replication
+
+_The model leans on risk and salience, not direction._
+
+</div>
+</div>
 
 ---
 
@@ -559,17 +846,28 @@ Phase 1 finds a robust bearish-over-bullish asymmetry in **marginal sensitivity*
 
 # LIMITATIONS AND WHAT COMES NEXT
 
+<div class="cols">
+<div class="col">
+
 ### Limitations
 
-- Validation rests on model agreement rather than expert human annotation (n = 30).
-- `price_range` does not survive the regime boundary.
-- One commodity, two years, one structural break, and a public web corpus rather than the institutional feeds traders read.
+- **No human ground truth.** Model agreement with only 30 samples.
+- **`price_range`** breaks at the regime boundary.
+- **Narrow scope.** One commodity, two years, one structural break.
+- **Public web corpus**, not the institutional feeds traders read.
+
+</div>
+<div class="col">
 
 ### Next steps
 
-- A small expert-annotated anchor set (~200 articles) to calibrate the calibration.
-- Carry tone **and** price sentiment as parallel features, since their disagreement may itself be a signal.
-- Multi-regime training, and cross-commodity replication (Natuarl Gas LP).
+- **An expert anchor set** of ~200 articles, to calibrate the calibration.
+- **Carry both sentiments.** Tone and price impact in parallel; their disagreement may itself be signal.
+- **Multi-regime training.**
+- **Cross-commodity replication**, starting with natural gas.
+
+</div>
+</div>
 
 ---
 
@@ -577,7 +875,7 @@ Phase 1 finds a robust bearish-over-bullish asymmetry in **marginal sensitivity*
 
 ## MAIN FINDING
 
-# Liquidity responds to risk, not sentiment direction
+# LIQUIDITY RESPONDS TO RISK, NOT SENTIMENT DIRECTION
 
 The market does not trade more because the news is bad. It trades more because the news raises uncertainty about supply.
 In petrol oil, that uncertainty is often against intuition, bullish for price.
