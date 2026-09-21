@@ -156,7 +156,7 @@ There is **no human-annotated ground truth** for this corpus. So validation uses
 
 **Where it broke is the interesting part.** The sign disagreements were not evenly spread. The two highest-magnitude articles in the sample, both geopolitical supply stories (an Iran escalation warning, the UAE announcing its exit from OPEC), disagreed on sign. Those are exactly the articles that move the market. The cause: the composite score was being asked to hold two separate judgments at once, the **valence of the event** (good news or bad news?) and its **directional price impact** (does it push crude up or down?). For most articles those agree. For a supply-threatening escalation they come apart.
 
-**The fix, and the surprise.**
+**The fix, decomposition of sentiment_score into 3 different channels.**
 
 | Metric                        | v1 schema    | v2 schema       |
 | ----------------------------- | ------------ | --------------- |
@@ -166,7 +166,7 @@ There is **no human-annotated ground truth** for this corpus. So validation uses
 | `demand_impact` correlation   | n/a          | 0.96            |
 | `risk_premium` correlation    | n/a          | 0.82            |
 
-The composite improved from 0.39 to 0.88 **without being modified**. Asking the model to decompose the article first, and only then produce a composite, disciplines everything downstream. Within the calibration sample the channels are near-orthogonal (pairwise |r| ≤ 0.40). On the full corpus `demand_impact` is essentially uncorrelated with the others (|r| < 0.05), while `supply_impact` and `risk_premium` correlate at −0.55, which is economically expected since a supply threat is itself a risk event.
+The composite improved from 0.39 to 0.88 **without being modified**. Asking the model to decompose the article first, and only then produce a composite, disciplines everything downstream. Within the calibration sample the channels are near-orthogonal. On the full corpus `demand_impact` is uncorrelated with the others, while `supply_impact` and `risk_premium` correlate at −0.55, which is economically expected since a supply threat is itself a risk event.
 
 ---
 
@@ -230,6 +230,14 @@ Overall attention peaks at **−1h**, and bullish-sentiment hours peak at −1h 
 
 _Left: the top 15 of 90 features by mean variable-selection weight, with `sentiment_score` shown for reference at rank 21. Right: share of total importance by feature block._
 
+Regenerate this figure from the tracked run outputs with:
+
+```bash
+python 03_src/tft/plot_feature_importance.py
+```
+
+Pass `--variant v2.0` or `--variant v2.1` to plot the earlier ablation runs, which is the quickest way to watch the categorical-encoding fix land. The channel block carries **10.8%** of importance under int-encoding (v2.0) and **54.7%** once the categoricals become learned embeddings (v2.1), before the entity flags arrive in v2.2 and take half the weight.
+
 - **Entities carry the block.** All 71 flags together hold about **52%** of total importance, and six sit in the top ten.
 - **Only four features lead individually.** VIX (0.188), `supply_impact` (0.121), `ent_oman` (0.113), `demand_impact` (0.055). Everything from rank 5 down is ≤ 0.022.
 - **The channels rival VIX.** Supply plus demand carry 17.6% of raw weight, against 18.8% for VIX alone.
@@ -271,9 +279,7 @@ Hourly volume is strongly autocorrelated, so "assume nothing changes" is already
 
 **Works.** Volume and Amihud beat persistence at every horizon.
 
-**Fails, and cleanly.** `price_range` loses on the full test set, but the failure is **regime-specific, not general**. On the pre-war slice the model does well (0.154 to 0.165, beating persistence). On the war slice it degrades to about 1.200. Having only ever seen the moderate-volatility pre-war regime, the model reverts toward the historical mean while persistence at least tracks the elevated current state. This is a textbook **regime-extrapolation failure**, and it makes sense that it surfaces on `price_range`, which measures intraday volatility directly and is therefore the most regime-sensitive of the three targets.
-
-**One diagnostic is weaker than it looks.** The `log_volume` reduction curve grows from 46% at +1h to 71% at +12h, but that is mostly the _baseline_ decaying (persistence MAE rises 1.076 → 2.174) rather than the model improving (0.585 → 0.631). Read strictly, this curve establishes that the Phase 2 features carry signal across the whole 1-to-12h window; it does **not** locate the response at any particular lag. The lag evidence comes from the attention pattern.
+**Fails on different regime.** `price_range` loses on the full test set, but the failure is **regime-specific, not general**. On the pre-war slice the model does well (0.154 to 0.165, beating persistence). On the war slice it degrades to about 1.200. Having only ever seen the moderate-volatility pre-war regime, the model reverts toward the historical mean while persistence at least tracks the elevated current state. This is a textbook **regime-extrapolation failure**, and it makes sense that it surfaces on `price_range`, which measures intraday volatility directly and is therefore the most regime-sensitive of the three targets.
 
 ### Supporting finding: headline bias
 
@@ -338,7 +344,9 @@ news-driven-liquidity/
 │   └── deprecated_notebooks/    # superseded exploration
 ├── 03_src/
 │   ├── nlp/llm_features.py      # locked prompt, tool schema, entity maps, canonicalize_entities
-│   └── tft/config.py            # locked constants (TRAIN_END, WAR_ONSET_IDX, ...)
+│   └── tft/
+│       ├── config.py                  # locked constants (TRAIN_END, WAR_ONSET_IDX, ...)
+│       └── plot_feature_importance.py # regenerates the v2 importance figure
 ├── 04_outputs/
 │   ├── figures/                 # generated PNGs (lag coefficients, attention, importance...)
 │   ├── tables/                  # generated CSVs (lag OLS results...)
@@ -407,8 +415,6 @@ Run in numeric order; each builds on the tables the previous ones wrote.
 1. Create a Python environment (a local `.venv` is used) and install the dependencies (pandas, numpy, yfinance, requests, beautifulsoup4, anthropic, python-dotenv, statsmodels, scipy, matplotlib, seaborn, torch, lightning, pytorch-forecasting, transformers for FinBERT).
 2. Put an `ANTHROPIC_API_KEY` in a `.env` file at the project root (needed for notebooks 06 and 11). An EIA API key is optional (notebook 02 falls back to `DEMO_KEY`, which is rate-limited).
 3. Run the notebooks in order (00 -> 13). Notebook 13 (TFT v2) is intended for Google Colab with a GPU.
-
-Two conventions worth knowing before you touch the code: use `lightning.pytorch`, never the legacy `pytorch_lightning` namespace (mixing them causes silent `isinstance` failures), and use `dt.ceil`, never `dt.round`, when aligning articles to trading hours.
 
 ---
 
